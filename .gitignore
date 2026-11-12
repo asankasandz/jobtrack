@@ -1,0 +1,24 @@
+# --- Secrets / local-only ---
+# Real DB credentials: copy config/database.example.php to config/database.php
+config/database.php
+# Personal notes (contains credentials) — never commit
+New Text Document.txt
+*.txt
+.env
+
+# --- User uploads (private CVs + vacancy images) ---
+storage/resumes/*
+!storage/resumes/.htaccess
+public/assets/uploads/vacancies/*
+!public/assets/uploads/vacancies/.gitkeep
+
+# --- Local tooling ---
+.claude/
+.impeccable/
+.vscode/
+.idea/
+
+# --- OS junk ---
+Thumbs.db
+Desktop.ini
+.DS_Store
