@@ -28,14 +28,13 @@ finalized UIs navigable, (3) two full CRUD features beyond auth. Chosen CRUD fea
 ```
 interview-project/
   public/
-    index.php              <- front controller + router dispatch (all requests go through this)
+    index.php              <- front controller: require_once all classes + two switch statements (GET / POST) pick the controller method
     assets/style.css        <- internal app stylesheet (navy theme) — used by every view except home.php
     assets/landing.css      <- public landing page ONLY (sky-blue theme: --accent #0369a1 / --accent-bright #38bdf8 / --accent-soft #e0f2fe; responsive); loaded by home.php
     assets/uploads/vacancies/  <- PUBLIC vacancy images (created at runtime)
   app/
     Core/
       Database.php           PDO singleton (prepared statements only, EMULATE_PREPARES off)
-      Router.php              tiny GET/POST route table + dispatch
       Auth.php                 session helpers; requireRole() is the server-side authorization gate
     Models/
       User.php, Vacancy.php, Application.php, ApplicationStageHistory.php
@@ -52,7 +51,7 @@ interview-project/
     migrate_add_vacancy_image.php   one-off migration already applied to the live DB
     seed.php                    creates the HR account: php seed.php <email> <password> ["Name"]
     smoke_test.php               15-check end-to-end test of auth/vacancy/application logic (self-cleaning)
-    smoke_test_image.php          4-check test of vacancy image_path create/update/COALESCE behaviour
+    smoke_test_image.php          4-check test of vacancy image_path create/update/keep-old-image behaviour
   storage/
     resumes/                   PRIVATE CV storage, outside public/, .htaccess "Require all denied",
                                 only ever served through ApplicationController::downloadResume()
@@ -83,7 +82,7 @@ interview-project/
 
 Status values: `Applied → Screening → InterviewScheduled → InterviewCompleted → DecisionPending →
 {Offered | Rejected}`, with `Withdrawn` reachable from any non-final state. Valid transitions are
-enforced in code (`Application::VALID_TRANSITIONS`), not just assumed — `smoke_test.php` verifies
+enforced in code (`Application::nextStatuses()`), not just assumed — `smoke_test.php` verifies
 an invalid jump (Applied → Offered) is rejected.
 
 ## Security decisions worth remembering (will come up in Q&A)
@@ -120,3 +119,11 @@ C:\xampp\php\php.exe database\smoke_test.php
 C:\xampp\php\php.exe database\smoke_test_image.php
 ```
 Both are self-cleaning (roll back/delete their own test rows) and safe to re-run anytime.
+
+## Coding style (deliberately basic PHP — decided 2026-11-13)
+
+Lecturers asked for a basic project, so the code avoids advanced language features while keeping
+MVC + security: no namespaces/`use`/autoloader (plain `require_once`), no Router class (switch in
+`index.php`), no type declarations, no class constants, no closures/arrow functions. Upload checks are
+plain `checkX()` (returns error message or '') + `saveX()` helpers; `mime_content_type()` checks the
+real file type; `uniqid()` names files. Keep new code in this same style.
