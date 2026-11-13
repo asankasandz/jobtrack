@@ -1,0 +1,112 @@
+# Branch flow:
+#   development -> day-to-day work; every push runs the tests only.
+#   main        -> production; merging development into main runs the
+#                  tests again and, if they pass, deploys to EC2.
+name: Test and Deploy
+
+on:
+  push:
+    branches: [main, development]
+  pull_request:
+    branches: [main]
+  workflow_dispatch:
+
+concurrency:
+  group: deploy-main
+  cancel-in-progress: false
+
+jobs:
+  test:
+    runs-on: ubuntu-24.04
+    services:
+      mysql:
+        image: mysql:8.0
+        env:
+          MYSQL_ROOT_PASSWORD: root
+          MYSQL_DATABASE: interview_project
+        ports: ["3306:3306"]
+        options: >-
+          --health-cmd="mysqladmin ping -proot"
+          --health-interval=5s --health-timeout=5s --health-retries=20
+
+    steps:
+      - uses: actions/checkout@v4
+
+      - uses: shivammathur/setup-php@v2
+        with:
+          php-version: "8.3"
+          extensions: pdo_mysql, mbstring, fileinfo
+          coverage: none
+
+      - name: Lint every PHP file
+        run: find . -name '*.php' -not -path './.git/*' -print0 | xargs -0 -n1 php -l
+
+      - name: Prepare test database
+        run: |
+          cp config/database.example.php config/database.php
+          sed -i "s/'password' => ''/'password' => 'root'/" config/database.php
+          mysql -h127.0.0.1 -uroot -proot interview_project < database/schema.sql
+          php database/seed.php ci-hr@example.com 'ci-password-123' "CI HR"
+
+      - name: Smoke tests
+        run: |
+          php database/smoke_test.php | tee smoke.log
+          php database/smoke_test_image.php | tee -a smoke.log
+          ! grep -q '\[FAIL\]' smoke.log
+
+  deploy:
+    needs: test
+    if: github.event_name != 'pull_request' && github.ref == 'refs/heads/main'
+    runs-on: ubuntu-24.04
+    environment: production
+
+    steps:
+      - uses: actions/checkout@v4
+
+      - name: Set up SSH key
+        env:
+          EC2_SSH_KEY: ${{ secrets.EC2_SSH_KEY }}
+          EC2_HOST: ${{ secrets.EC2_HOST }}
+        run: |
+          mkdir -p ~/.ssh
+          printf '%s\n' "$EC2_SSH_KEY" > ~/.ssh/ec2.pem
+          chmod 600 ~/.ssh/ec2.pem
+          ssh-keyscan -H "$EC2_HOST" >> ~/.ssh/known_hosts
+
+      # --delete keeps the server identical to git, but excluded paths are
+      # never touched: the server's own DB config and every uploaded file.
+      - name: Upload code with rsync
+        env:
+          EC2_HOST: ${{ secrets.EC2_HOST }}
+          EC2_USER: ${{ secrets.EC2_USER }}
+        run: |
+          rsync -rlptz --delete \
+            -e "ssh -i ~/.ssh/ec2.pem" \
+            --exclude '.git/' \
+            --exclude '.github/' \
+            --exclude 'config/database.php' \
+            --include 'storage/resumes/.htaccess' \
+            --exclude 'storage/resumes/*' \
+            --exclude 'public/assets/uploads/vacancies/*' \
+            ./ "$EC2_USER@$EC2_HOST:/var/www/jobtrack/"
+
+      # Permissions for uploads, and on the very first deploy create the
+      # tables (later schema changes are applied by hand as migrations).
+      - name: Finish on server
+        env:
+          EC2_HOST: ${{ secrets.EC2_HOST }}
+          EC2_USER: ${{ secrets.EC2_USER }}
+        run: |
+          ssh -i ~/.ssh/ec2.pem "$EC2_USER@$EC2_HOST" 'set -e
+            cd /var/www/jobtrack
+            sudo chgrp -R www-data storage public/assets/uploads
+            sudo chmod -R 775 storage public/assets/uploads
+            if ! sudo mysql jobtrack -e "SELECT 1 FROM users LIMIT 1" >/dev/null 2>&1; then
+              echo "First deploy: creating tables"
+              sudo mysql jobtrack < database/schema.sql
+            fi'
+
+      - name: Health check
+        env:
+          EC2_HOST: ${{ secrets.EC2_HOST }}
+        run: curl -fsS -o /dev/null -w "HTTP %{http_code}\n" "http://$EC2_HOST/index.php"

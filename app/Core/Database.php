@@ -29,8 +29,14 @@ class Database
                     PDO::ATTR_EMULATE_PREPARES => false,
                 ]);
             } catch (PDOException $e) {
+                // Log the real reason for the developer; never show host/user
+                // details to visitors.
+                error_log('Database connection failed: ' . $e->getMessage());
+                if (PHP_SAPI === 'cli') {
+                    throw $e;
+                }
                 http_response_code(500);
-                die('Database connection failed: ' . htmlspecialchars($e->getMessage()));
+                die('The service is temporarily unavailable. Please try again later.');
             }
         }
 
