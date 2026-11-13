@@ -13,6 +13,11 @@
 # ----------------------------------------------------------------------
 set -euo pipefail
 
+# Optional: DOMAIN=job-track.example.com bash setup.sh
+# When set, Apache answers to that name and a free Let's Encrypt HTTPS
+# certificate is installed (the DNS A record must already point here).
+DOMAIN=${DOMAIN:-}
+
 APP_DIR=/var/www/jobtrack
 DB_NAME=jobtrack
 DB_USER=jobtrack
@@ -61,7 +66,7 @@ sudo chgrp www-data "$APP_DIR/config/database.php"
 echo "==> Configuring Apache (document root = public/)"
 sudo tee /etc/apache2/sites-available/jobtrack.conf >/dev/null <<APACHE
 <VirtualHost *:80>
-    ServerName _default_
+    ServerName ${DOMAIN:-localhost}
     DocumentRoot $APP_DIR/public
     DirectoryIndex index.php
 
@@ -93,6 +98,18 @@ sudo sed -i 's/^display_errors = .*/display_errors = Off/; s/^upload_max_filesiz
 sudo sed -i 's/^;\?session.cookie_httponly =.*/session.cookie_httponly = 1/' "$PHP_INI"
 sudo systemctl restart apache2
 
+if [ -n "$DOMAIN" ]; then
+  echo "==> Installing HTTPS certificate for $DOMAIN"
+  sudo apt-get install -y certbot python3-certbot-apache
+  # --redirect: http://domain is sent to https://domain automatically.
+  # Certbot also installs a timer that renews the certificate before it expires.
+  sudo certbot --apache -d "$DOMAIN" --non-interactive --agree-tos \
+    --register-unsafely-without-email --redirect
+  # Session cookie only over HTTPS once the site has a certificate.
+  sudo sed -i 's/^;\?session.cookie_secure =.*/session.cookie_secure = 1/' "$PHP_INI"
+  sudo systemctl restart apache2
+fi
+
 cat <<DONE
 
 ==================================================================
@@ -102,6 +119,6 @@ cat <<DONE
  2. The first deploy creates the tables automatically. Then create
     the HR account (once):
       php $APP_DIR/database/seed.php you@example.com 'StrongPassword' "HR Admin"
- 3. Open http://<your-ec2-public-ip>/
+ 3. Open ${DOMAIN:+https://$DOMAIN/ (or) }http://<your-ec2-public-ip>/
 ==================================================================
 DONE
