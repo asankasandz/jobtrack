@@ -2,9 +2,7 @@
 // One-off migration: adds image_path to an already-created vacancies table.
 // Safe to re-run — it checks first and does nothing if the column already exists.
 
-require __DIR__ . '/../app/Core/Database.php';
-use App\Core\Database;
-
+require_once __DIR__ . '/../app/Core/Database.php';
 $pdo = Database::connection();
 
 $check = $pdo->query("SHOW COLUMNS FROM vacancies LIKE 'image_path'");

@@ -1,16 +1,13 @@
 <?php
 
-namespace App\Controllers;
-
-use App\Core\Auth;
-use App\Models\User;
-
+// Login, sign up and logout.
 class AuthController
 {
-    public function showLogin(): void
+    public function showLogin()
     {
+        // Already logged in? Go straight to the dashboard.
         if (Auth::check()) {
-            header('Location: index.php?route=' . (Auth::isHr() ? 'hr.dashboard' : 'applicant.dashboard'));
+            header('Location: index.php?route=' . $this->dashboardFor(Auth::role()));
             exit;
         }
         $errors = $_SESSION['errors'] ?? [];
@@ -18,16 +15,19 @@ class AuthController
         require __DIR__ . '/../Views/auth/login.php';
     }
 
-    public function login(): void
+    public function login()
     {
         $email = trim($_POST['email'] ?? '');
         $password = $_POST['password'] ?? '';
         $errors = [];
+        $user = null;
 
         if ($email === '' || $password === '') {
             $errors[] = 'Please enter both email and password.';
         } else {
             $user = User::findByEmail($email);
+            // Same message for "no such email" and "wrong password",
+            // so attackers can't find out which emails are registered.
             if ($user === null || !password_verify($password, $user['password_hash'])) {
                 $errors[] = 'Incorrect email or password.';
             }
@@ -40,27 +40,14 @@ class AuthController
         }
 
         Auth::login($user);
-        header('Location: ' . $this->redirectTarget($user['role']));
+        header('Location: ' . $this->pageAfterLogin($user['role']));
         exit;
     }
 
-    // Supports "Apply" links for guests: they're sent to login/signup with
-    // ?next=... and, once authenticated, land back on the page they wanted.
-    // Only an internal index.php?route=... path is ever honoured, never an
-    // external URL, so this can't be used as an open redirect.
-    private function redirectTarget(string $role): string
-    {
-        $next = $_GET['next'] ?? '';
-        if ($role === 'applicant' && $next !== '' && preg_match('/^[a-zA-Z0-9_.=&-]+$/', $next)) {
-            return 'index.php?route=' . $next;
-        }
-        return 'index.php?route=' . ($role === 'hr' ? 'hr.dashboard' : 'applicant.dashboard');
-    }
-
-    public function showSignup(): void
+    public function showSignup()
     {
         if (Auth::check()) {
-            header('Location: index.php?route=' . (Auth::isHr() ? 'hr.dashboard' : 'applicant.dashboard'));
+            header('Location: index.php?route=' . $this->dashboardFor(Auth::role()));
             exit;
         }
         $errors = $_SESSION['errors'] ?? [];
@@ -69,7 +56,7 @@ class AuthController
         require __DIR__ . '/../Views/auth/signup.php';
     }
 
-    public function signup(): void
+    public function signup()
     {
         $name = trim($_POST['name'] ?? '');
         $email = trim($_POST['email'] ?? '');
@@ -100,21 +87,42 @@ class AuthController
             exit;
         }
 
-        // Public sign-up always creates an Applicant account.
-        // HR accounts are seeded directly in the database (see database/seed.php),
-        // not created through this form, so a user can never self-assign the HR role.
+        // Public sign-up always creates an Applicant account (never HR).
         $userId = User::createApplicant($name, $email, $password);
         $user = User::findById($userId);
         Auth::login($user);
 
-        header('Location: ' . $this->redirectTarget($user['role']));
+        header('Location: ' . $this->pageAfterLogin($user['role']));
         exit;
     }
 
-    public function logout(): void
+    public function logout()
     {
         Auth::logout();
         header('Location: index.php?route=login');
         exit;
+    }
+
+    // ---------- Helper functions ----------
+
+    private function dashboardFor($role)
+    {
+        if ($role === 'hr') {
+            return 'hr.dashboard';
+        }
+        return 'applicant.dashboard';
+    }
+
+    // Where to go after login. If a guest clicked "Log in to apply", the
+    // link has ?next=... so they come back to that vacancy after logging in.
+    // The check only allows letters, numbers and . _ = & - characters, so
+    // "next" can never send the user to another website.
+    private function pageAfterLogin($role)
+    {
+        $next = $_GET['next'] ?? '';
+        if ($role === 'applicant' && $next !== '' && preg_match('/^[a-zA-Z0-9_.=&-]+$/', $next)) {
+            return 'index.php?route=' . $next;
+        }
+        return 'index.php?route=' . $this->dashboardFor($role);
     }
 }

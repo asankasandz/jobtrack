@@ -1,50 +1,59 @@
 <?php
 
-namespace App\Models;
-
-use App\Core\Database;
-
+// Model for the "applications" table.
 class Application
 {
-    public const FINAL_STATUSES = ['Offered', 'Rejected', 'Withdrawn'];
-
-    // The controlled state machine from Chapter 1's State Diagram.
-    private const VALID_TRANSITIONS = [
-        'Applied' => ['Screening', 'Withdrawn'],
-        'Screening' => ['InterviewScheduled', 'Withdrawn'],
-        'InterviewScheduled' => ['InterviewCompleted', 'Withdrawn'],
-        'InterviewCompleted' => ['DecisionPending', 'Withdrawn'],
-        'DecisionPending' => ['Offered', 'Rejected', 'Withdrawn'],
-    ];
-
-    public static function isValidTransition(string $from, string $to): bool
+    // Statuses where the process has ended - nothing can change after these.
+    public static function finalStatuses()
     {
-        return in_array($to, self::VALID_TRANSITIONS[$from] ?? [], true);
+        return ['Offered', 'Rejected', 'Withdrawn'];
     }
 
-    public static function nextStatuses(string $from): array
+    // The allowed next steps for each status (the State Diagram in Chapter 1).
+    // Example: from "Applied" you can only go to "Screening" or "Withdrawn".
+    public static function nextStatuses($currentStatus)
     {
-        return self::VALID_TRANSITIONS[$from] ?? [];
+        $transitions = [
+            'Applied'            => ['Screening', 'Withdrawn'],
+            'Screening'          => ['InterviewScheduled', 'Withdrawn'],
+            'InterviewScheduled' => ['InterviewCompleted', 'Withdrawn'],
+            'InterviewCompleted' => ['DecisionPending', 'Withdrawn'],
+            'DecisionPending'    => ['Offered', 'Rejected', 'Withdrawn'],
+        ];
+
+        if (isset($transitions[$currentStatus])) {
+            return $transitions[$currentStatus];
+        }
+        return []; // final status: no next steps
     }
 
-    public static function existsActiveForVacancyAndApplicant(int $vacancyId, int $applicantId): bool
+    public static function isValidTransition($from, $to)
+    {
+        return in_array($to, self::nextStatuses($from));
+    }
+
+    // One application per applicant per vacancy.
+    public static function existsActiveForVacancyAndApplicant($vacancyId, $applicantId)
     {
         $stmt = Database::connection()->prepare(
-            'SELECT 1 FROM applications WHERE vacancy_id = :vacancy_id AND applicant_id = :applicant_id LIMIT 1'
+            'SELECT COUNT(*) FROM applications WHERE vacancy_id = :vacancy_id AND applicant_id = :applicant_id'
         );
         $stmt->execute(['vacancy_id' => $vacancyId, 'applicant_id' => $applicantId]);
-        return (bool) $stmt->fetchColumn();
+        return $stmt->fetchColumn() > 0;
     }
 
-    public static function create(int $vacancyId, int $applicantId, string $resumePath, ?string $coverLetter): int
+    public static function create($vacancyId, $applicantId, $resumePath, $coverLetter)
     {
         $db = Database::connection();
+
+        // Transaction: the application AND its first history row are saved
+        // together. If one fails, neither is saved.
         $db->beginTransaction();
 
         try {
             $stmt = $db->prepare(
-                'INSERT INTO applications (vacancy_id, applicant_id, resume_path, cover_letter, status)
-                 VALUES (:vacancy_id, :applicant_id, :resume_path, :cover_letter, "Applied")'
+                "INSERT INTO applications (vacancy_id, applicant_id, resume_path, cover_letter, status)
+                 VALUES (:vacancy_id, :applicant_id, :resume_path, :cover_letter, 'Applied')"
             );
             $stmt->execute([
                 'vacancy_id' => $vacancyId,
@@ -52,27 +61,32 @@ class Application
                 'resume_path' => $resumePath,
                 'cover_letter' => $coverLetter,
             ]);
-            $applicationId = (int) $db->lastInsertId();
+            $applicationId = $db->lastInsertId();
 
             ApplicationStageHistory::record($applicationId, null, 'Applied', $applicantId, 'Application submitted.');
 
             $db->commit();
             return $applicationId;
-        } catch (\Throwable $e) {
+        } catch (Exception $e) {
             $db->rollBack();
             throw $e;
         }
     }
 
-    public static function findById(int $id): ?array
+    public static function findById($id)
     {
         $stmt = Database::connection()->prepare('SELECT * FROM applications WHERE id = :id LIMIT 1');
         $stmt->execute(['id' => $id]);
         $application = $stmt->fetch();
-        return $application ?: null;
+
+        if ($application === false) {
+            return null;
+        }
+        return $application;
     }
 
-    public static function forApplicant(int $applicantId): array
+    // All applications of one applicant, with the vacancy title.
+    public static function forApplicant($applicantId)
     {
         $stmt = Database::connection()->prepare(
             'SELECT a.*, v.title AS vacancy_title, v.department
@@ -85,7 +99,8 @@ class Application
         return $stmt->fetchAll();
     }
 
-    public static function forHr(): array
+    // All applications, with vacancy title and applicant name - for HR.
+    public static function forHr()
     {
         $stmt = Database::connection()->query(
             'SELECT a.*, v.title AS vacancy_title, u.name AS applicant_name
@@ -97,18 +112,22 @@ class Application
         return $stmt->fetchAll();
     }
 
-    public static function historyFor(int $applicationId): array
+    public static function historyFor($applicationId)
     {
         return ApplicationStageHistory::forApplication($applicationId);
     }
 
-    public static function changeStatus(int $id, string $newStatus, int $changedBy, ?string $note): bool
+    // Move an application to a new status. Returns true on success,
+    // false if the change is not allowed by the state machine.
+    public static function changeStatus($id, $newStatus, $changedBy, $note)
     {
         $application = self::findById($id);
         if ($application === null) {
             return false;
         }
 
+        // Server-side check: even if someone sends a fake request,
+        // an invalid jump (e.g. Applied -> Offered) is refused here.
         if (!self::isValidTransition($application['status'], $newStatus)) {
             return false;
         }
@@ -124,43 +143,38 @@ class Application
 
             $db->commit();
             return true;
-        } catch (\Throwable $e) {
+        } catch (Exception $e) {
             $db->rollBack();
             throw $e;
         }
     }
 
-    public static function withdraw(int $id, int $applicantId): bool
+    // An applicant can withdraw only their OWN application, and only before a final decision.
+    public static function withdraw($id, $applicantId)
     {
         $application = self::findById($id);
-        if ($application === null || (int) $application['applicant_id'] !== $applicantId) {
+        if ($application === null || $application['applicant_id'] != $applicantId) {
             return false;
         }
 
-        if (in_array($application['status'], self::FINAL_STATUSES, true)) {
+        if (in_array($application['status'], self::finalStatuses())) {
             return false;
         }
 
         return self::changeStatus($id, 'Withdrawn', $applicantId, 'Withdrawn by applicant.');
     }
 
-    public static function summaryStats(): array
+    // Numbers for the HR dashboard cards.
+    public static function summaryStats()
     {
         $db = Database::connection();
-        $total = (int) $db->query('SELECT COUNT(*) FROM applications')->fetchColumn();
-        $screening = (int) $db->query("SELECT COUNT(*) FROM applications WHERE status = 'Screening'")->fetchColumn();
-        $interview = (int) $db->query(
-            "SELECT COUNT(*) FROM applications WHERE status IN ('InterviewScheduled','InterviewCompleted')"
-        )->fetchColumn();
-        $offers = (int) $db->query("SELECT COUNT(*) FROM applications WHERE status = 'Offered'")->fetchColumn();
-        $openVacancies = (int) $db->query("SELECT COUNT(*) FROM vacancies WHERE status = 'open'")->fetchColumn();
 
         return [
-            'open_vacancies' => $openVacancies,
-            'total_applications' => $total,
-            'in_screening' => $screening,
-            'interview_stage' => $interview,
-            'offers_made' => $offers,
+            'open_vacancies'     => $db->query("SELECT COUNT(*) FROM vacancies WHERE status = 'open'")->fetchColumn(),
+            'total_applications' => $db->query('SELECT COUNT(*) FROM applications')->fetchColumn(),
+            'in_screening'       => $db->query("SELECT COUNT(*) FROM applications WHERE status = 'Screening'")->fetchColumn(),
+            'interview_stage'    => $db->query("SELECT COUNT(*) FROM applications WHERE status IN ('InterviewScheduled', 'InterviewCompleted')")->fetchColumn(),
+            'offers_made'        => $db->query("SELECT COUNT(*) FROM applications WHERE status = 'Offered'")->fetchColumn(),
         ];
     }
 }

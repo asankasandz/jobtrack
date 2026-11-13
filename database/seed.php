@@ -8,14 +8,12 @@
 // Credentials are passed as arguments so no real password ever lives in the
 // repository. If any HR account already exists, nothing is created.
 
-if (PHP_SAPI !== 'cli') {
+if (php_sapi_name() !== 'cli') {
     http_response_code(403);
     exit('CLI only.');
 }
 
-require __DIR__ . '/../app/Core/Database.php';
-
-use App\Core\Database;
+require_once __DIR__ . '/../app/Core/Database.php';
 
 $email = $argv[1] ?? '';
 $password = $argv[2] ?? '';

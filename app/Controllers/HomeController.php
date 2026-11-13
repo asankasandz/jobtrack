@@ -1,17 +1,11 @@
 <?php
 
-namespace App\Controllers;
-
-use App\Core\Auth;
-use App\Models\Vacancy;
-
+// The public landing page (guests and applicants).
 class HomeController
 {
-    // Public landing page. HR is sent straight to their dashboard since the
-    // public vacancy listing has nothing for them to do; Applicants and guests
-    // see the same page, just with a different nav (login/signup vs. account links).
-    public function index(): void
+    public function index()
     {
+        // HR has nothing to do on the public page - send them to their dashboard.
         if (Auth::isHr()) {
             header('Location: index.php?route=hr.dashboard');
             exit;

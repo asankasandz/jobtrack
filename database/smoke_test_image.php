@@ -1,18 +1,13 @@
 <?php
 
-spl_autoload_register(function (string $class): void {
-    $prefix = 'App\\';
-    if (strncmp($class, $prefix, strlen($prefix)) !== 0) return;
-    $relative = substr($class, strlen($prefix));
-    $path = __DIR__ . '/../app/' . str_replace('\\', '/', $relative) . '.php';
-    if (is_file($path)) require $path;
-});
+require_once __DIR__ . '/../app/Core/Database.php';
+require_once __DIR__ . '/../app/Models/User.php';
+require_once __DIR__ . '/../app/Models/Vacancy.php';
+require_once __DIR__ . '/../app/Models/Application.php';
+require_once __DIR__ . '/../app/Models/ApplicationStageHistory.php';
 
-use App\Core\Database;
-use App\Models\User;
-use App\Models\Vacancy;
 
-function check(string $label, bool $cond): void {
+function check($label, $cond) {
     echo ($cond ? '[PASS] ' : '[FAIL] ') . $label . "\n";
 }
 

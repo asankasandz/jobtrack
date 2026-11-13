@@ -1,4 +1,3 @@
-<?php use App\Models\Application; ?>
 <!DOCTYPE html>
 <html lang="en">
 <head>

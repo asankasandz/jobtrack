@@ -1,30 +1,11 @@
 <?php
 
-namespace App\Controllers;
-
-use App\Core\Auth;
-use App\Models\Vacancy;
-
+// HR only: create, view, edit and delete vacancies (full CRUD),
+// including the optional vacancy image.
 class VacancyController
 {
-    private const ALLOWED_EXTENSIONS = ['jpg', 'jpeg', 'png', 'webp'];
-    private const ALLOWED_MIME_TYPES = ['image/jpeg', 'image/png', 'image/webp'];
-    private const MAX_SIZE_BYTES = 2 * 1024 * 1024; // 2MB
-
-    // Unlike CVs (private, served only via a controller action), vacancy images
-    // are meant to be publicly visible on the landing page, so they're stored
-    // inside public/ and linked directly.
-    private function uploadsPath(): string
-    {
-        $path = __DIR__ . '/../../public/assets/uploads/vacancies';
-        if (!is_dir($path)) {
-            mkdir($path, 0755, true);
-        }
-        return $path;
-    }
-
-    // HR-facing: every vacancy, with manage actions.
-    public function manage(): void
+    // List every vacancy.
+    public function manage()
     {
         Auth::requireRole('hr');
         $vacancies = Vacancy::allForHr();
@@ -33,7 +14,8 @@ class VacancyController
         require __DIR__ . '/../Views/vacancies/manage.php';
     }
 
-    public function showCreate(): void
+    // Show the empty "New Vacancy" form.
+    public function showCreate()
     {
         Auth::requireRole('hr');
         $vacancy = null;
@@ -43,29 +25,41 @@ class VacancyController
         require __DIR__ . '/../Views/vacancies/form.php';
     }
 
-    public function store(): void
+    // Save a new vacancy.
+    public function store()
     {
         Auth::requireRole('hr');
-        $data = $this->validate($_POST);
 
-        if ($data === null) {
+        $data = $this->getFormData();
+        $data['status'] = 'open';
+
+        $errors = $this->validate($data);
+        if (!empty($errors)) {
+            $_SESSION['errors'] = $errors;
+            $_SESSION['old'] = $_POST;
             header('Location: index.php?route=vacancies.create');
             exit;
         }
 
-        $imagePath = $this->handleImageUpload();
-        if ($imagePath === false) {
-            header('Location: index.php?route=vacancies.create');
-            exit;
+        // The image is optional.
+        $data['image_path'] = null;
+        if ($this->imageWasUploaded()) {
+            $error = $this->checkImage($_FILES['image']);
+            if ($error !== '') {
+                $_SESSION['errors'] = [$error];
+                header('Location: index.php?route=vacancies.create');
+                exit;
+            }
+            $data['image_path'] = $this->saveImage($_FILES['image']);
         }
-        $data['image_path'] = $imagePath;
 
         Vacancy::create($data, Auth::id());
         header('Location: index.php?route=vacancies.manage');
         exit;
     }
 
-    public function showEdit(): void
+    // Show the "Edit Vacancy" form, filled with the current values.
+    public function showEdit()
     {
         Auth::requireRole('hr');
         $id = (int) ($_GET['id'] ?? 0);
@@ -82,31 +76,44 @@ class VacancyController
         require __DIR__ . '/../Views/vacancies/form.php';
     }
 
-    public function update(): void
+    // Save changes to an existing vacancy.
+    public function update()
     {
         Auth::requireRole('hr');
         $id = (int) ($_POST['id'] ?? 0);
-        $data = $this->validate($_POST, true);
 
-        if ($data === null) {
+        $data = $this->getFormData();
+        $data['status'] = $_POST['status'] ?? 'open';
+
+        $errors = $this->validate($data);
+        if ($data['status'] !== 'open' && $data['status'] !== 'closed') {
+            $errors[] = 'Invalid status.';
+        }
+        if (!empty($errors)) {
+            $_SESSION['errors'] = $errors;
             header('Location: index.php?route=vacancies.edit&id=' . $id);
             exit;
         }
 
-        $imagePath = $this->handleImageUpload();
-        if ($imagePath === false) {
-            header('Location: index.php?route=vacancies.edit&id=' . $id);
-            exit;
+        // No new image chosen = keep the old image (Vacancy::update handles that).
+        $data['image_path'] = null;
+        if ($this->imageWasUploaded()) {
+            $error = $this->checkImage($_FILES['image']);
+            if ($error !== '') {
+                $_SESSION['errors'] = [$error];
+                header('Location: index.php?route=vacancies.edit&id=' . $id);
+                exit;
+            }
+            $data['image_path'] = $this->saveImage($_FILES['image']);
         }
-        // null (no new file chosen) means "keep the existing image" — Vacancy::update() uses COALESCE for this.
-        $data['image_path'] = $imagePath;
 
         Vacancy::update($id, $data);
         header('Location: index.php?route=vacancies.manage');
         exit;
     }
 
-    public function destroy(): void
+    // Delete a vacancy - but not if people have already applied to it.
+    public function destroy()
     {
         Auth::requireRole('hr');
         $id = (int) ($_POST['id'] ?? 0);
@@ -122,83 +129,79 @@ class VacancyController
         exit;
     }
 
-    // Returns: string filename on a valid new upload, null when no file was chosen
-    // (meaning "no image" on create, or "keep the existing one" on update),
-    // or false when a file was chosen but failed validation (errors are stashed in session).
-    private function handleImageUpload()
+    // ---------- Helper functions ----------
+
+    // Read the form fields from $_POST.
+    private function getFormData()
     {
-        if (!isset($_FILES['image']) || $_FILES['image']['error'] === UPLOAD_ERR_NO_FILE) {
-            return null;
-        }
-
-        $file = $_FILES['image'];
-
-        if ($file['error'] !== UPLOAD_ERR_OK) {
-            $_SESSION['errors'] = ['The image failed to upload. Please try again.'];
-            return false;
-        }
-
-        if ($file['size'] > self::MAX_SIZE_BYTES) {
-            $_SESSION['errors'] = ['The image must be 2MB or smaller.'];
-            return false;
-        }
-
-        $extension = strtolower(pathinfo($file['name'], PATHINFO_EXTENSION));
-        if (!in_array($extension, self::ALLOWED_EXTENSIONS, true)) {
-            $_SESSION['errors'] = ['Only JPG, PNG, or WEBP images are accepted.'];
-            return false;
-        }
-
-        $finfo = finfo_open(FILEINFO_MIME_TYPE);
-        $mimeType = finfo_file($finfo, $file['tmp_name']);
-        finfo_close($finfo);
-
-        if (!in_array($mimeType, self::ALLOWED_MIME_TYPES, true)) {
-            $_SESSION['errors'] = ['The uploaded file does not look like a valid image.'];
-            return false;
-        }
-
-        // Generated filename: never trust the original name supplied by the browser,
-        // same principle as the CV upload in ApplicationController.
-        $generatedName = bin2hex(random_bytes(16)) . '.' . $extension;
-        $destination = $this->uploadsPath() . '/' . $generatedName;
-
-        if (!move_uploaded_file($file['tmp_name'], $destination)) {
-            $_SESSION['errors'] = ['Could not save the uploaded image. Please try again.'];
-            return false;
-        }
-
-        return $generatedName;
+        return [
+            'title' => trim($_POST['title'] ?? ''),
+            'department' => trim($_POST['department'] ?? ''),
+            'description' => trim($_POST['description'] ?? ''),
+            'requirements' => trim($_POST['requirements'] ?? ''),
+        ];
     }
 
-    private function validate(array $input, bool $withStatus = false): ?array
+    // Returns a list of error messages (empty list = no errors).
+    private function validate($data)
     {
         $errors = [];
-        $title = trim($input['title'] ?? '');
-        $department = trim($input['department'] ?? '');
-        $description = trim($input['description'] ?? '');
-        $requirements = trim($input['requirements'] ?? '');
-        $status = $input['status'] ?? 'open';
-
-        if ($title === '' || $department === '' || $description === '') {
+        if ($data['title'] === '' || $data['department'] === '' || $data['description'] === '') {
             $errors[] = 'Title, department, and description are required.';
         }
-        if ($withStatus && !in_array($status, ['open', 'closed'], true)) {
-            $errors[] = 'Invalid status.';
+        return $errors;
+    }
+
+    // Did HR choose an image file in the form?
+    private function imageWasUploaded()
+    {
+        return !empty($_FILES['image']) && $_FILES['image']['error'] !== UPLOAD_ERR_NO_FILE;
+    }
+
+    // Checks the uploaded image. Returns an error message, or '' if it is OK.
+    private function checkImage($file)
+    {
+        $maxSize = 2 * 1024 * 1024; // 2MB
+        $allowedExtensions = ['jpg', 'jpeg', 'png', 'webp'];
+        $allowedTypes = ['image/jpeg', 'image/png', 'image/webp'];
+
+        if ($file['error'] !== UPLOAD_ERR_OK) {
+            return 'The image failed to upload. Please try again.';
         }
 
-        if (!empty($errors)) {
-            $_SESSION['errors'] = $errors;
-            $_SESSION['old'] = $input;
-            return null;
+        if ($file['size'] > $maxSize) {
+            return 'The image must be 2MB or smaller.';
         }
 
-        return [
-            'title' => $title,
-            'department' => $department,
-            'description' => $description,
-            'requirements' => $requirements,
-            'status' => $withStatus ? $status : 'open',
-        ];
+        // 1) Check the file extension.
+        $extension = strtolower(pathinfo($file['name'], PATHINFO_EXTENSION));
+        if (!in_array($extension, $allowedExtensions)) {
+            return 'Only JPG, PNG, or WEBP images are accepted.';
+        }
+
+        // 2) Check the REAL file type from the file's content.
+        $realType = mime_content_type($file['tmp_name']);
+        if (!in_array($realType, $allowedTypes)) {
+            return 'The uploaded file does not look like a valid image.';
+        }
+
+        return '';
+    }
+
+    // Vacancy images are public (shown on the landing page), so unlike CVs
+    // they are saved inside public/. Returns the new file name.
+    private function saveImage($file)
+    {
+        $folder = __DIR__ . '/../../public/assets/uploads/vacancies';
+        if (!is_dir($folder)) {
+            mkdir($folder, 0755, true);
+        }
+
+        // Never use the name the user's browser sent - make our own.
+        $extension = strtolower(pathinfo($file['name'], PATHINFO_EXTENSION));
+        $newName = uniqid('vacancy_') . '.' . $extension;
+
+        move_uploaded_file($file['tmp_name'], $folder . '/' . $newName);
+        return $newName;
     }
 }
