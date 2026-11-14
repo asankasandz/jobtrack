@@ -20,9 +20,12 @@ $current = [
   <?php $activePage = 'admin.users'; require __DIR__ . '/../partials/staff_sidebar.php'; ?>
   <div class="hr-main">
     <?php require __DIR__ . '/../partials/staff_userbar.php'; ?>
-    <div class="h1"><?= $user ? 'Edit User' : 'Add User' ?></div>
+    <div class="page-head">
+      <div class="h1"><?= $user ? 'Edit User' : 'Add User' ?></div>
+      <p class="page-sub"><?= $user ? 'Change the details of this account. Leave the password empty to keep it unchanged.' : 'Create an HR, Super Admin or applicant account.' ?></p>
+    </div>
 
-    <div class="card" style="max-width:520px;">
+    <div class="panel form-panel">
       <?php if (!empty($errors)): ?>
         <div class="alert alert-error"><?php foreach ($errors as $e): ?><div><?= htmlspecialchars($e) ?></div><?php endforeach; ?></div>
       <?php endif; ?>
@@ -53,9 +56,9 @@ $current = [
           <input type="password" name="password" autocomplete="new-password" <?= $user ? '' : 'required' ?>>
         </div>
 
-        <div style="display:flex;gap:10px;margin-top:8px;">
-          <button type="submit" class="btn" style="margin-top:0;width:auto;padding:11px 26px;"><?= $user ? 'Save changes' : 'Create user' ?></button>
-          <a href="index.php?route=admin.users" class="btn-link" style="margin:0;align-self:center;">Cancel</a>
+        <div class="form-actions">
+          <button type="submit" class="btn-primary"><?= $user ? 'Save changes' : 'Create user' ?></button>
+          <a href="index.php?route=admin.users" class="btn-cancel">Cancel</a>
         </div>
       </form>
     </div>

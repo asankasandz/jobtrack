@@ -127,6 +127,22 @@ class Report
         return $stmt->fetchAll();
     }
 
+    // "InterviewScheduled" -> "Interview Scheduled" (readable name for screens).
+    public static function label($status)
+    {
+        return preg_replace('/(?<!^)([A-Z])/', ' $1', (string) $status);
+    }
+
+    // One status change as a sentence, e.g. "Screening → Interview Scheduled".
+    // The very first row of an application has no "from" stage.
+    public static function stageText($from, $to)
+    {
+        if ($from === null) {
+            return 'Application submitted';
+        }
+        return self::label($from) . ' → ' . self::label($to);
+    }
+
     // Turn one status change into a plain result for the report:
     //   first row (no "from" stage)    -> Applied
     //   moved on to the next stage     -> Passed   (the stage it LEFT was passed)

@@ -9,6 +9,7 @@
 <div class="hr-wrap">
   <?php $activePage = 'vacancies.manage'; require __DIR__ . '/../partials/staff_sidebar.php'; ?>
   <div class="hr-main">
+    <?php require __DIR__ . '/../partials/staff_userbar.php'; ?>
     <div class="h1"><?= $vacancy ? 'Edit Vacancy' : 'New Vacancy' ?></div>
     <div class="card" style="max-width:600px;">
       <?php if (!empty($errors)): ?>

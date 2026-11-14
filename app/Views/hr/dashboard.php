@@ -33,7 +33,7 @@
         <div class="hr-row">
           <div><?= htmlspecialchars($app['applicant_name']) ?></div>
           <div><?= htmlspecialchars($app['vacancy_title']) ?></div>
-          <div><span class="badge b-<?= strtolower($app['status']) ?>"><?= htmlspecialchars($app['status']) ?></span></div>
+          <div><span class="badge b-<?= strtolower($app['status']) ?>"><?= htmlspecialchars(Report::label($app['status'])) ?></span></div>
           <div><a href="index.php?route=applications.resume&id=<?= (int) $app['id'] ?>">Download</a></div>
           <div class="hr-actions" style="flex:1.6;">
             <?php if (!empty($next)): ?>
@@ -42,7 +42,7 @@
                 <input type="hidden" name="id" value="<?= (int) $app['id'] ?>">
                 <select name="new_status" style="height:28px;font-size:11px;">
                   <?php foreach ($next as $n): ?>
-                    <option value="<?= htmlspecialchars($n) ?>"><?= htmlspecialchars($n) ?></option>
+                    <option value="<?= htmlspecialchars($n) ?>"><?= htmlspecialchars(Report::label($n)) ?></option>
                   <?php endforeach; ?>
                 </select>
                 <textarea name="note" class="note-box" rows="3" placeholder="Note for the applicant (e.g. interview date, time, online link or venue)"></textarea>
@@ -57,7 +57,7 @@
           <summary>History &amp; notes (<?= count($app['history']) ?>)</summary>
           <ul>
             <?php foreach ($app['history'] as $h): ?>
-              <li><?= htmlspecialchars($h['from_status'] ?? 'start') ?> &rarr; <?= htmlspecialchars($h['to_status']) ?>
+              <li><?= htmlspecialchars(Report::stageText($h['from_status'], $h['to_status'])) ?>
                 by <?= htmlspecialchars($h['changed_by_name']) ?> (<?= htmlspecialchars($h['changed_at']) ?>)
                 <?php if (!empty($h['note'])): ?>
                   <div class="hist-note">Note: <?= nl2br(htmlspecialchars($h['note'])) ?></div>

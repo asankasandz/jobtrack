@@ -30,7 +30,7 @@ $stageOrder = ['Applied', 'Screening', 'InterviewScheduled', 'InterviewCompleted
           <b><?= htmlspecialchars($app['vacancy_title']) ?></b>
           <div style="font-size:12px;color:#8894a8;"><?= htmlspecialchars($app['department']) ?></div>
         </div>
-        <span class="badge b-<?= strtolower($app['status']) ?>"><?= htmlspecialchars($app['status']) ?></span>
+        <span class="badge b-<?= strtolower($app['status']) ?>"><?= htmlspecialchars(Report::label($app['status'])) ?></span>
       </div>
 
       <?php
@@ -60,7 +60,7 @@ $stageOrder = ['Applied', 'Screening', 'InterviewScheduled', 'InterviewCompleted
         <summary style="cursor:pointer;font-size:12px;color:#35547f;">View status history</summary>
         <ul style="margin-top:8px;font-size:12px;color:#444;">
           <?php foreach ($app['history'] as $h): ?>
-            <li><?= htmlspecialchars($h['from_status'] ?? 'start') ?> &rarr; <?= htmlspecialchars($h['to_status']) ?>
+            <li><?= htmlspecialchars(Report::stageText($h['from_status'], $h['to_status'])) ?>
               (<?= htmlspecialchars($h['changed_at']) ?>)
               <?php if (!empty($h['note'])): ?>
                 <div class="hist-note">Note: <?= nl2br(htmlspecialchars($h['note'])) ?></div>

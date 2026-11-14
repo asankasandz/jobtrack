@@ -41,7 +41,7 @@
         <b><?= htmlspecialchars($app['vacancy_title']) ?></b>
         <div style="font-size:12px;color:#8894a8;"><?= htmlspecialchars($app['department']) ?></div>
       </div>
-      <span class="badge b-<?= strtolower($app['status']) ?>"><?= htmlspecialchars($app['status']) ?></span>
+      <span class="badge b-<?= strtolower($app['status']) ?>"><?= htmlspecialchars(Report::label($app['status'])) ?></span>
     </div>
   <?php endforeach; ?>
 </div>
