@@ -16,7 +16,7 @@ class User
         return $user;
     }
 
-    // Log in with the Employee ID (the username). Case does not matter (HR145 = hr145).
+    // Log in with the Employee ID (the username). Case does not matter (HR2025 = hr2025).
     public static function findByEmployeeId($employeeId)
     {
         $stmt = Database::connection()->prepare('SELECT * FROM users WHERE employee_id = :employee_id LIMIT 1');
@@ -29,7 +29,7 @@ class User
         return $user;
     }
 
-    // The next free Employee ID for a role, in the style super1 / hr1 / emp1 (then emp2, emp3 ...).
+    // The next free Employee ID for a role, in the style super2024 / hr2024 / emp2024 (then emp2025, emp2026 ...).
     // Used as the suggestion when approving a registration, for old accounts without
     // an ID, and for the first account created with seed.php.
     public static function nextEmployeeId($role)
@@ -42,7 +42,8 @@ class User
              FROM users WHERE employee_id REGEXP :pattern'
         );
         $stmt->execute(['pattern' => '^' . $prefix . '[0-9]+$']);
-        $next = (int) $stmt->fetchColumn() + 1;
+        // The numbers start at 2024 and count up, so IDs are not as easy to guess as emp1, emp2 ...
+        $next = max(2024, (int) $stmt->fetchColumn() + 1);
 
         return $prefix . $next;
     }

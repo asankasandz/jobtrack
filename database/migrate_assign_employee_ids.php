@@ -1,6 +1,6 @@
 <?php
 // One-off migration: users log in with their Employee ID, so every existing account needs one.
-// Accounts without an ID get the next free one in the style super1 / hr1 / emp1, emp2 ...
+// Accounts without an ID get the next free one in the style super2024 / hr2024 / emp2024, emp2025 ...
 // (oldest account first). Safe to re-run: accounts that already have an ID are left alone.
 // The Super Admin can change any of these IDs afterwards on the Users page.
 

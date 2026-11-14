@@ -45,7 +45,7 @@ $current = [
         </div>
         <div class="field">
           <label class="field-label">Employee ID <span class="muted">(the person logs in with this)</span></label>
-          <input type="text" name="employee_id" maxlength="30" placeholder="e.g. emp4, hr145, super220" value="<?= htmlspecialchars($current['employee_id']) ?>" required>
+          <input type="text" name="employee_id" maxlength="30" placeholder="e.g. emp2027, hr2025, super2030" value="<?= htmlspecialchars($current['employee_id']) ?>" required>
         </div>
         <div class="field">
           <label class="field-label">Role</label>

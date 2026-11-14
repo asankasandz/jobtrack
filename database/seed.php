@@ -6,9 +6,9 @@
 //   php database/seed.php <email> <password> ["Full Name"] [hr|admin] [EmployeeID]
 //
 // People log in with their Employee ID. If you leave it out, the next free one is used
-// (hr1 for HR, super1 for the Super Admin). The role defaults to "hr". Examples:
+// (hr2024 for HR, super2024 for the Super Admin). The role defaults to "hr". Examples:
 //   php database/seed.php hr@example.com "StrongPass1" "HR Admin"
-//   php database/seed.php boss@example.com "StrongPass1" "Super Admin" admin super220
+//   php database/seed.php boss@example.com "StrongPass1" "Super Admin" admin super2030
 //
 // Credentials are passed as arguments so no real password ever lives in the
 // repository. If an account with that role already exists, nothing is created.

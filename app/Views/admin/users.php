@@ -113,7 +113,7 @@
 
       <?php if ($role === 'pending'): ?>
       <p class="help-note">
-        <b>Tip:</b> check who the person is, type the <b>Employee ID</b> to give them (a suggestion is filled in, e.g. emp4), then <b>Approve</b>. They log in with that ID and their password. <b>Reject</b> deletes the registration.
+        <b>Tip:</b> check who the person is, type the <b>Employee ID</b> to give them (a suggestion is filled in, e.g. emp2027), then <b>Approve</b>. They log in with that ID and their password. <b>Reject</b> deletes the registration.
       </p>
       <?php else: ?>
       <p class="help-note">

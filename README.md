@@ -13,9 +13,9 @@ MIT4301 Independent Study project. Plain PHP (hand-written MVC, no framework), M
 2. Create a database called `interview_project` in phpMyAdmin and import `database/schema.sql`.
 3. Copy `config/database.example.php` to `config/database.php` and adjust credentials if needed.
 4. Create the HR account and the Super Admin account (the last word is the role):
-   `C:\xampp\php\php.exe database\seed.php hr@example.com "YourStrongPassword" "HR Name" hr`   (logs in as `hr1`)
-   `C:\xampp\php\php.exe database\seed.php admin@example.com "YourStrongPassword" "Super Admin" admin`   (logs in as `super1`)
-   Add your own Employee ID as a last argument if you prefer, e.g. `... admin super220`.
+   `C:\xampp\php\php.exe database\seed.php hr@example.com "YourStrongPassword" "HR Name" hr`   (logs in as `hr2024`)
+   `C:\xampp\php\php.exe database\seed.php admin@example.com "YourStrongPassword" "Super Admin" admin`   (logs in as `super2024`)
+   Add your own Employee ID as a last argument if you prefer, e.g. `... admin super2030`.
 5. Open `http://localhost/interview-project/public/index.php`
 
 ## Tests

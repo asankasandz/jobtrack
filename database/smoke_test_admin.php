@@ -105,6 +105,7 @@ try {
     User::delete($pendingId);
 
     check('nextEmployeeId() suggests emp<number> for employees', preg_match('/^emp[0-9]+$/', User::nextEmployeeId('applicant')) === 1);
+    check('...and the number is a 4-digit one starting at 2024 or higher', (int) substr(User::nextEmployeeId('applicant'), 3) >= 2024);
     check('nextEmployeeId() suggests hr<number> for HR', preg_match('/^hr[0-9]+$/', User::nextEmployeeId('hr')) === 1);
     check('nextEmployeeId() suggests super<number> for the Super Admin', preg_match('/^super[0-9]+$/', User::nextEmployeeId('admin')) === 1);
     check('The suggested ID is never one that is already taken', User::employeeIdTaken(User::nextEmployeeId('applicant')) === false);
