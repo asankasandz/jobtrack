@@ -75,3 +75,10 @@ textarea { height: 90px; padding: 8px 10px; resize: vertical; }
 .alert-error { background: #fdecea; color: #c0392b; border: 1px solid #f3c5c0; }
 .alert-success { background: #eafaf0; color: #2e9e5b; border: 1px solid #bfe9d0; }
 
+
+/* Status history + HR notes */
+.hist-note { margin: 2px 0 6px 0; padding: 4px 8px; background: #eef3fb; border-left: 3px solid #35547f; border-radius: 3px; color: #1f3864; }
+.hr-history { font-size: 12px; padding: 0 2px 10px 2px; color: #444; border-bottom: 1px solid #e2e6ef; }
+.hr-history summary { cursor: pointer; color: #35547f; }
+.hr-history ul { margin: 8px 0 0 18px; }
+.hr-history li { margin-bottom: 4px; }

@@ -216,6 +216,12 @@ class ApplicationController
     {
         Auth::requireRole('hr');
         $applications = Application::forHr();
+
+        // Add the status history (with notes) to each application.
+        foreach ($applications as $i => $app) {
+            $applications[$i]['history'] = Application::historyFor($app['id']);
+        }
+
         $stats = Application::summaryStats();
         $errors = $_SESSION['errors'] ?? [];
         unset($_SESSION['errors']);

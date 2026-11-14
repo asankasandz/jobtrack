@@ -48,7 +48,11 @@ $stageOrder = ['Applied', 'Screening', 'InterviewScheduled', 'InterviewCompleted
         <ul style="margin-top:8px;font-size:12px;color:#444;">
           <?php foreach ($app['history'] as $h): ?>
             <li><?= htmlspecialchars($h['from_status'] ?? 'start') ?> &rarr; <?= htmlspecialchars($h['to_status']) ?>
-              (<?= htmlspecialchars($h['changed_at']) ?>)</li>
+              (<?= htmlspecialchars($h['changed_at']) ?>)
+              <?php if (!empty($h['note'])): ?>
+                <div class="hist-note">Note: <?= htmlspecialchars($h['note']) ?></div>
+              <?php endif; ?>
+            </li>
           <?php endforeach; ?>
         </ul>
       </details>

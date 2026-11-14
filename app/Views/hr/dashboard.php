@@ -58,6 +58,19 @@
             <?php endif; ?>
           </div>
         </div>
+        <details class="hr-history">
+          <summary>History &amp; notes (<?= count($app['history']) ?>)</summary>
+          <ul>
+            <?php foreach ($app['history'] as $h): ?>
+              <li><?= htmlspecialchars($h['from_status'] ?? 'start') ?> &rarr; <?= htmlspecialchars($h['to_status']) ?>
+                by <?= htmlspecialchars($h['changed_by_name']) ?> (<?= htmlspecialchars($h['changed_at']) ?>)
+                <?php if (!empty($h['note'])): ?>
+                  <div class="hist-note">Note: <?= htmlspecialchars($h['note']) ?></div>
+                <?php endif; ?>
+              </li>
+            <?php endforeach; ?>
+          </ul>
+        </details>
       <?php endforeach; ?>
     </div>
   </div>
