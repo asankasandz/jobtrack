@@ -85,7 +85,7 @@ class Report
     {
         $sql = 'SELECT h.id, h.from_status, h.to_status, h.note, h.changed_at,
                        v.title AS vacancy_title,
-                       u.name AS applicant_name, u.email AS applicant_email,
+                       u.name AS applicant_name, u.email AS applicant_email, u.employee_id AS applicant_employee_id,
                        cb.name AS changed_by_name
                 FROM application_stage_history h
                 JOIN applications a ON a.id = h.application_id

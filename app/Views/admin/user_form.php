@@ -23,7 +23,7 @@ $current = [
     <?php require __DIR__ . '/../partials/staff_userbar.php'; ?>
     <div class="page-head">
       <div class="h1"><?= $user ? 'Edit User' : 'Add User' ?></div>
-      <p class="page-sub"><?= $user ? 'Change the details of this account. Leave the password empty to keep it unchanged.' : 'Create an account for an employee, HR staff member or Super Admin. They log in with the email and password you set.' ?></p>
+      <p class="page-sub"><?= $user ? 'Change the details of this account. Leave the password empty to keep it unchanged.' : 'Create an account for an employee, HR staff member or Super Admin. They log in with the Employee ID and password you set.' ?></p>
     </div>
 
     <div class="panel form-panel">
@@ -44,8 +44,8 @@ $current = [
           <input type="email" name="email" value="<?= htmlspecialchars($current['email']) ?>" required>
         </div>
         <div class="field">
-          <label class="field-label">Employee ID <span class="muted">(optional)</span></label>
-          <input type="text" name="employee_id" maxlength="30" value="<?= htmlspecialchars($current['employee_id']) ?>">
+          <label class="field-label">Employee ID <span class="muted">(the person logs in with this)</span></label>
+          <input type="text" name="employee_id" maxlength="30" placeholder="e.g. emp4, hr145, super220" value="<?= htmlspecialchars($current['employee_id']) ?>" required>
         </div>
         <div class="field">
           <label class="field-label">Role</label>

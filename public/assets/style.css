@@ -239,3 +239,8 @@ textarea { height: 90px; padding: 8px 10px; resize: vertical; }
 .pending-banner { display: block; margin-bottom: 18px; padding: 13px 18px; background: #fff4d6; border: 1px solid #f0d9a0; border-radius: 10px; color: #6b4600; font-size: 14px; }
 .pending-banner:hover { background: #ffeec2; }
 .login-card .muted { font-size: 12.5px; line-height: 1.5; }
+
+/* ---- Employee ID ---- */
+.emp-id { font-family: Consolas, 'Courier New', monospace; font-weight: 700; color: #1f3864; white-space: nowrap; }
+.row-actions form { display: flex; gap: 6px; align-items: center; }
+.row-actions input.id-input { height: 31px; width: 118px; border: 1px solid #bfe3cd; border-radius: 7px; padding: 0 9px; font-size: 12.5px; font-family: Consolas, 'Courier New', monospace; font-weight: 700; background: #f7fcf9; }

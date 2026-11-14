@@ -39,6 +39,7 @@ class AdminController
         }
         $counts = User::countByRole();
         $pendingCount = User::countPending();
+        $suggestedId = User::nextEmployeeId('applicant');   // pre-filled in the Approve box
 
         $errors = $_SESSION['errors'] ?? [];
         $success = $_SESSION['success'] ?? '';
@@ -161,19 +162,27 @@ class AdminController
         exit;
     }
 
-    // Approve a registration: the person can log in from now on.
+    // Approve a registration: the Super Admin gives the person an Employee ID (their login
+    // username) and from now on they can log in.
     public function approve()
     {
         Auth::requireRole('admin');
 
         $id = (int) ($_POST['id'] ?? 0);
+        $employeeId = trim($_POST['employee_id'] ?? '');
         $user = User::findById($id);
 
         if ($user === null || $user['is_approved'] == 1) {
             $_SESSION['errors'] = ['That registration was not found (it may already be approved).'];
+        } elseif ($employeeId === '') {
+            $_SESSION['errors'] = ['Type the Employee ID to give this person, then approve.'];
+        } elseif (!preg_match('/^[A-Za-z0-9_-]{2,30}$/', $employeeId)) {
+            $_SESSION['errors'] = ['Employee ID may only contain letters, numbers, - and _ (2 to 30 characters).'];
+        } elseif (User::employeeIdTaken($employeeId, $id)) {
+            $_SESSION['errors'] = ['The Employee ID ' . $employeeId . ' is already used by another account.'];
         } else {
-            User::approve($id);
-            $_SESSION['success'] = '"' . $user['name'] . '" was approved and can now log in.';
+            User::approve($id, $employeeId);
+            $_SESSION['success'] = '"' . $user['name'] . '" was approved. Their Employee ID is ' . $employeeId . ' - tell them to log in with it.';
         }
 
         header('Location: index.php?route=admin.users&role=pending');
@@ -257,12 +266,13 @@ class AdminController
 
         $out = fopen('php://output', 'w');
         fwrite($out, "\xEF\xBB\xBF");   // lets Excel read UTF-8 correctly
-        fputcsv($out, ['Date', 'Applicant', 'Email', 'Vacancy', 'From stage', 'To stage', 'Result', 'Note', 'Decided by']);
+        fputcsv($out, ['Date', 'Applicant', 'Employee ID', 'Email', 'Vacancy', 'From stage', 'To stage', 'Result', 'Note', 'Decided by']);
 
         foreach ($rows as $row) {
             fputcsv($out, [
                 $row['changed_at'],
                 $this->csvSafe($row['applicant_name']),
+                $this->csvSafe($row['applicant_employee_id']),
                 $this->csvSafe($row['applicant_email']),
                 $this->csvSafe($row['vacancy_title']),
                 $row['from_status'] === null ? 'Application' : $row['from_status'],
@@ -342,8 +352,10 @@ class AdminController
             }
         }
 
-        // Employee ID is optional here (the Super Admin can leave it empty), but if given it must be valid and unique.
-        if ($employeeId !== '') {
+        // The Employee ID is the username, so it is required, must be valid and must be unique.
+        if ($employeeId === '') {
+            $errors[] = 'Employee ID is required - it is what the person logs in with.';
+        } else {
             if (!preg_match('/^[A-Za-z0-9_-]{2,30}$/', $employeeId)) {
                 $errors[] = 'Employee ID may only contain letters, numbers, - and _ (2 to 30 characters).';
             } elseif (User::employeeIdTaken($employeeId, $userId === null ? 0 : $userId)) {

@@ -42,7 +42,7 @@
       <div class="tbl-wrap">
         <table class="tbl" id="userTable">
           <thead>
-            <tr><th>User</th><th>Role</th><th>Status</th><th>Joined</th><th class="right">Actions</th></tr>
+            <tr><th>User</th><th>Employee ID</th><th>Role</th><th>Status</th><th>Joined</th><th class="right">Actions</th></tr>
           </thead>
           <tbody>
             <?php foreach ($users as $u): $isMe = ($u['id'] == Auth::id()); ?>
@@ -53,10 +53,10 @@
                     <div>
                       <b><?= htmlspecialchars($u['name']) ?><?= $isMe ? ' <span class="you">you</span>' : '' ?></b>
                       <small><?= htmlspecialchars($u['email']) ?></small>
-                      <?php if (!empty($u['employee_id'])): ?><small>Employee ID: <?= htmlspecialchars($u['employee_id']) ?></small><?php endif; ?>
                     </div>
                   </div>
                 </td>
+                <td class="emp-id"><?= $u['employee_id'] ? htmlspecialchars($u['employee_id']) : '<span class="muted">&mdash;</span>' ?></td>
                 <td><span class="role role-<?= htmlspecialchars($u['role']) ?>"><?= $u['role'] === 'admin' ? 'Super Admin' : ($u['role'] === 'hr' ? 'HR' : 'Employee') ?></span></td>
                 <td>
                   <?php if ($role === 'pending'): ?>
@@ -72,6 +72,7 @@
                     <form method="post" action="index.php?route=admin.users.approve">
                       <?= Auth::csrfField() ?>
                       <input type="hidden" name="id" value="<?= (int) $u['id'] ?>">
+                      <input type="text" name="employee_id" class="id-input" value="<?= htmlspecialchars($suggestedId) ?>" maxlength="30" required title="Employee ID to give this person (they log in with it)">
                       <button type="submit" class="act good">Approve</button>
                     </form>
                     <form method="post" action="index.php?route=admin.users.reject"
@@ -112,7 +113,7 @@
 
       <?php if ($role === 'pending'): ?>
       <p class="help-note">
-        <b>Tip:</b> check the Employee ID against your staff records, then <b>Approve</b> to let the person log in, or <b>Reject</b> to delete the registration.
+        <b>Tip:</b> check who the person is, type the <b>Employee ID</b> to give them (a suggestion is filled in, e.g. emp4), then <b>Approve</b>. They log in with that ID and their password. <b>Reject</b> deletes the registration.
       </p>
       <?php else: ?>
       <p class="help-note">

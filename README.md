@@ -2,7 +2,7 @@
 
 MIT4301 Independent Study project. Plain PHP (hand-written MVC, no framework), MySQL via PDO.
 
-- **Employees** register with their Employee ID (the Super Admin must approve the account before they can log in), then browse internal vacancies, apply with a CV, track every stage and withdraw.
+- **Employees** register with their name, email and password. The Super Admin approves the account and gives them an **Employee ID**; they then log in with that ID and their password, browse internal vacancies, apply with a CV, track every stage and withdraw.
 - **HR staff** manage vacancies and move applications through a controlled pipeline:
   `Applied → Screening → InterviewScheduled → InterviewCompleted → DecisionPending → Offered | Rejected`
   (`Withdrawn` is reachable from any non-final stage).
@@ -13,8 +13,9 @@ MIT4301 Independent Study project. Plain PHP (hand-written MVC, no framework), M
 2. Create a database called `interview_project` in phpMyAdmin and import `database/schema.sql`.
 3. Copy `config/database.example.php` to `config/database.php` and adjust credentials if needed.
 4. Create the HR account and the Super Admin account (the last word is the role):
-   `C:\xampp\php\php.exe database\seed.php hr@example.com "YourStrongPassword" "HR Name" hr`
-   `C:\xampp\php\php.exe database\seed.php admin@example.com "YourStrongPassword" "Super Admin" admin`
+   `C:\xampp\php\php.exe database\seed.php hr@example.com "YourStrongPassword" "HR Name" hr`   (logs in as `hr1`)
+   `C:\xampp\php\php.exe database\seed.php admin@example.com "YourStrongPassword" "Super Admin" admin`   (logs in as `super1`)
+   Add your own Employee ID as a last argument if you prefer, e.g. `... admin super220`.
 5. Open `http://localhost/interview-project/public/index.php`
 
 ## Tests

@@ -16,6 +16,37 @@ class User
         return $user;
     }
 
+    // Log in with the Employee ID (the username). Case does not matter (HR145 = hr145).
+    public static function findByEmployeeId($employeeId)
+    {
+        $stmt = Database::connection()->prepare('SELECT * FROM users WHERE employee_id = :employee_id LIMIT 1');
+        $stmt->execute(['employee_id' => $employeeId]);
+        $user = $stmt->fetch();
+
+        if ($user === false) {
+            return null;
+        }
+        return $user;
+    }
+
+    // The next free Employee ID for a role, in the style super1 / hr1 / emp1 (then emp2, emp3 ...).
+    // Used as the suggestion when approving a registration, for old accounts without
+    // an ID, and for the first account created with seed.php.
+    public static function nextEmployeeId($role)
+    {
+        $prefixes = ['admin' => 'super', 'hr' => 'hr', 'applicant' => 'emp'];
+        $prefix = $prefixes[$role] ?? 'emp';
+
+        $stmt = Database::connection()->prepare(
+            'SELECT MAX(CAST(SUBSTRING(employee_id, ' . (strlen($prefix) + 1) . ') AS UNSIGNED))
+             FROM users WHERE employee_id REGEXP :pattern'
+        );
+        $stmt->execute(['pattern' => '^' . $prefix . '[0-9]+$']);
+        $next = (int) $stmt->fetchColumn() + 1;
+
+        return $prefix . $next;
+    }
+
     public static function findById($id)
     {
         $stmt = Database::connection()->prepare('SELECT * FROM users WHERE id = :id LIMIT 1');
@@ -124,11 +155,12 @@ class User
         return (int) Database::connection()->query('SELECT COUNT(*) FROM users WHERE is_approved = 0')->fetchColumn();
     }
 
-    // Approve a registration: from now on the user can log in.
-    public static function approve($id)
+    // Approve a registration: the Super Admin gives the person an Employee ID, and from
+    // now on they can log in with it.
+    public static function approve($id, $employeeId)
     {
-        $stmt = Database::connection()->prepare('UPDATE users SET is_approved = 1 WHERE id = :id');
-        $stmt->execute(['id' => $id]);
+        $stmt = Database::connection()->prepare('UPDATE users SET is_approved = 1, employee_id = :employee_id WHERE id = :id');
+        $stmt->execute(['employee_id' => $employeeId, 'id' => $id]);
     }
 
     // Reject a registration: the pending account is removed. (Only pending accounts - an

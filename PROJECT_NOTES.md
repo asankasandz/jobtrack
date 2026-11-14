@@ -8,7 +8,8 @@ Last updated: 2026-11-12.
 MIT4301 Independent Study project. Plain PHP (no framework), hand-written MVC, MySQL via PDO,
 running on XAMPP. **Internal system.** Three roles: **Employee** (role value `applicant`; registers themselves, then applies for internal
 vacancies), **HR Staff** and **Super Admin** (both created by the Super Admin / seeded, never by registration).
-**Registering does not give access:** a new account is *pending* until the Super Admin approves it.
+**Registering does not give access:** a new account is *pending* until the Super Admin approves it and assigns an Employee ID.
+**People log in with Employee ID + password** (e.g. `hr1`, `super1`, `emp1`; not case-sensitive; no email login).
 
 Built initially for an **interim progress demo** requiring: (1) working login + sign-up (sign-up creates a PENDING account that the Super Admin must approve), (2) all
 finalized UIs navigable, (3) two full CRUD features beyond auth. Chosen CRUD features: **Vacancy**
@@ -22,7 +23,7 @@ finalized UIs navigable, (3) two full CRUD features beyond auth. Chosen CRUD fea
 - **HR login:** credentials are NOT stored in the repo. Check phpMyAdmin's `users` table (role=`hr`)
   for the email; if the password is lost, reset its `password_hash` there.
   `seed.php` now takes credentials as CLI arguments and does nothing if any HR account already exists.
-- Employee accounts: either self-registered on `signup` (Employee ID, name, email, password -> pending until approved) or created directly by the Super Admin on `admin.users.create` (approved at once).
+- Employee accounts: either self-registered on `signup` (name, email, password -> pending, no Employee ID yet; the Super Admin types the ID when approving) or created directly by the Super Admin on `admin.users.create` (Employee ID required; approved at once).
 
 ## Folder structure
 
@@ -50,7 +51,7 @@ interview-project/
   database/
     schema.sql                 source-of-truth DDL (keep in sync with real migrations below)
     migrate_add_vacancy_image.php   one-off migration already applied to the live DB
-    seed.php                    creates the first HR or Super Admin account: php seed.php <email> <password> ["Name"] [hr|admin]
+    seed.php                    creates the first HR or Super Admin account: php seed.php <email> <password> ["Name"] [hr|admin] [EmployeeID] (default ID hr1 / super1)
     migrate_add_admin_role.php  adds role 'admin' + users.is_active (idempotent; the deploy workflow runs every migrate_*.php)
     smoke_test_admin.php        28-check test of user management + reports (model level)
     smoke_test.php               15-check end-to-end test of auth/vacancy/application logic (self-cleaning)
@@ -90,9 +91,10 @@ an invalid jump (Applied → Offered) is rejected.
 
 ## Security decisions worth remembering (will come up in Q&A)
 
-- **Registration needs approval (internal system).** Anyone can register, but the account is created with `is_approved = 0` and the role
-  is forced to employee, so outsiders cannot get in and nobody can make themselves HR/admin or skip the approval (extra form fields
-  such as `role=admin` are ignored). The Super Admin approves or rejects on `admin.users&role=pending`; rejecting deletes the account.
+- **Registration needs approval (internal system).** Anyone can register, but the account is created with `is_approved = 0`, the role
+  forced to employee and NO Employee ID, so outsiders cannot get in and nobody can make themselves HR/admin, skip the approval or choose
+  their own ID (extra form fields such as `role=admin` are ignored). The Super Admin approves (typing the Employee ID) or rejects on
+  `admin.users&role=pending`; rejecting deletes the account. Login uses Employee ID + password, with one generic error message.
 - **The index page (hero + vacancies) is only for logged-in users** — guests are redirected to the login page.
 - **CVs vs vacancy images are stored differently on purpose**: CVs are private (outside `public/`,
   `.htaccess`-denied, served only via an authorised controller method); vacancy images are public
@@ -135,7 +137,7 @@ real file type; `uniqid()` names files. Keep new code in this same style.
 ## Super Admin (added 2026-11-14)
 
 - Role `admin` = everything HR can do (HR pages use `Auth::requireStaff()`) PLUS user management and reports.
-- Create the first one: `php database/seed.php boss@example.com "StrongPass1" "Super Admin" admin` (HR users and further admins are created on the Users page).
+- Create the first one: `php database/seed.php boss@example.com "StrongPass1" "Super Admin" admin` -> logs in as `super1` (or add your own ID as the last argument, e.g. `super220`). HR users and further admins are created on the Users page.
 - Pages (`AdminController`, views in `app/Views/admin/`, shared sidebar in `app/Views/partials/`):
   `admin.dashboard` (stat cards + Chart.js line chart of the last 30 days + stage bar chart + latest activity),
   `admin.users` / `.create` / `.edit` (add, edit, change role, reset password), `admin.users.toggle` (deactivate/activate),
@@ -152,9 +154,11 @@ real file type; `uniqid()` names files. Keep new code in this same style.
 
 The lecturer said a system named *internal* must not let outsiders in, while the marking criteria still require a sign-up feature.
 Solution: **register -> pending -> Super Admin approves.** `users.employee_id` (unique) and `users.is_approved` (default 1; 0 = pending)
-were added (`database/migrate_add_registration_approval.php`; the deploy workflow runs every `migrate_*.php`). Sign-up asks for Employee ID,
-name, email, password and creates a pending employee; `AuthController::login()` refuses pending users with a clear message;
+were added (`database/migrate_add_registration_approval.php`; the deploy workflow runs every `migrate_*.php`). Sign-up asks for name, email, password only
+(no Employee ID) and creates a pending employee; the Super Admin types the Employee ID when approving it (a suggestion like `emp4` is pre-filled,
+from `User::nextEmployeeId()`), and people then log in with that ID + password. `migrate_assign_employee_ids.php` gave every existing
+account an ID (`hr1`, `super1`, `emp1`...; it prints them, so check the GitHub deploy log for the live IDs); `AuthController::login()` refuses pending users with a clear message;
 `Auth::requireLogin()` also refuses them. The Users page has a **Pending approval** tab (Approve / Reject), the sidebar shows a badge
 and the admin dashboard a banner. The index page (`home`) redirects guests to login. UI wording: role `applicant` is shown as **Employee**.
 **The report (Chapter 1 use cases / diagrams) must show: Employee registers -> Super Admin approves -> Employee logs in.**
-Possible extras: let HR approve too; check the Employee ID against a staff list.
+Possible extras: let HR approve too; check the Employee ID against a staff list; CSV import of employees.

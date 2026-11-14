@@ -17,7 +17,7 @@ $resultPill = ['Applied' => 'pill-info', 'Passed' => 'pill-ok', 'Failed' => 'pil
           <td>
             <div class="user-cell">
               <span class="avatar-circle sm"><?= htmlspecialchars(strtoupper(substr($row['applicant_name'], 0, 1))) ?></span>
-              <div><b><?= htmlspecialchars($row['applicant_name']) ?></b><small><?= htmlspecialchars($row['applicant_email']) ?></small></div>
+              <div><b><?= htmlspecialchars($row['applicant_name']) ?></b><small><?= $row['applicant_employee_id'] ? htmlspecialchars($row['applicant_employee_id']) . ' &middot; ' : '' ?><?= htmlspecialchars($row['applicant_email']) ?></small></div>
             </div>
           </td>
           <td><?= htmlspecialchars($row['vacancy_title']) ?></td>

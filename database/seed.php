@@ -3,11 +3,12 @@
 // HR and Super Admin accounts are created directly, not through the public
 // sign-up form (see app/Controllers/AuthController.php for why). Run once from the CLI:
 //
-//   php database/seed.php <email> <password> ["Full Name"] [hr|admin]
+//   php database/seed.php <email> <password> ["Full Name"] [hr|admin] [EmployeeID]
 //
-// The last argument is the role and defaults to "hr". Examples:
+// People log in with their Employee ID. If you leave it out, the next free one is used
+// (hr1 for HR, super1 for the Super Admin). The role defaults to "hr". Examples:
 //   php database/seed.php hr@example.com "StrongPass1" "HR Admin"
-//   php database/seed.php boss@example.com "StrongPass1" "Super Admin" admin
+//   php database/seed.php boss@example.com "StrongPass1" "Super Admin" admin super220
 //
 // Credentials are passed as arguments so no real password ever lives in the
 // repository. If an account with that role already exists, nothing is created.
@@ -18,14 +19,16 @@ if (php_sapi_name() !== 'cli') {
 }
 
 require_once __DIR__ . '/../app/Core/Database.php';
+require_once __DIR__ . '/../app/Models/User.php';
 
 $email = $argv[1] ?? '';
 $password = $argv[2] ?? '';
 $name = $argv[3] ?? 'HR Admin';
 $role = $argv[4] ?? 'hr';
+$employeeId = $argv[5] ?? '';
 
 if (!filter_var($email, FILTER_VALIDATE_EMAIL) || strlen($password) < 8 || !in_array($role, ['hr', 'admin'])) {
-    fwrite(STDERR, "Usage: php database/seed.php <email> <password (min 8 chars)> [\"Full Name\"] [hr|admin]\n");
+    fwrite(STDERR, "Usage: php database/seed.php <email> <password (min 8 chars)> [\"Full Name\"] [hr|admin] [EmployeeID]\n");
     exit(1);
 }
 
@@ -46,14 +49,23 @@ if ($stmt->fetch()) {
     exit(1);
 }
 
+if ($employeeId === '') {
+    $employeeId = User::nextEmployeeId($role);
+}
+if (!preg_match('/^[A-Za-z0-9_-]{2,30}$/', $employeeId) || User::employeeIdTaken($employeeId)) {
+    fwrite(STDERR, "The Employee ID '$employeeId' is invalid or already used.\n");
+    exit(1);
+}
+
 $stmt = $pdo->prepare(
-    'INSERT INTO users (name, email, password_hash, role) VALUES (:name, :email, :password_hash, :role)'
+    'INSERT INTO users (name, email, password_hash, role, employee_id) VALUES (:name, :email, :password_hash, :role, :employee_id)'
 );
 $stmt->execute([
     'name' => $name,
     'email' => $email,
     'password_hash' => password_hash($password, PASSWORD_DEFAULT),
     'role' => $role,
+    'employee_id' => $employeeId,
 ]);
 
-echo "$role account created: $email\n";
+echo "$role account created: $email - log in with Employee ID: $employeeId\n";

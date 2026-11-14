@@ -70,26 +70,33 @@ try {
     $applicationId = Application::create($vacancyId, $applicantId, 'fake.pdf', 'Cover.');
     check('An applicant with an application has records', User::hasRecords($applicantId) === true);
 
-    // --- registration approval ---
-    $pendingId = User::create('Admin Test Pending', "admintest_pend_$stamp@example.com", 'Password123!', 'applicant', "ADM-$stamp", 0);
-    $pendingId2 = User::create('Admin Test Pending Two', "admintest_pend2_$stamp@example.com", 'Password123!', 'applicant', "ADM2-$stamp", 0);
+    // --- registration approval + Employee ID ---
+    $pendingId = User::create('Admin Test Pending', "admintest_pend_$stamp@example.com", 'Password123!', 'applicant', null, 0);
+    $pendingId2 = User::create('Admin Test Pending Two', "admintest_pend2_$stamp@example.com", 'Password123!', 'applicant', null, 0);
     check('A registration is saved as pending (is_approved = 0)', User::findById($pendingId)['is_approved'] == 0);
-    check('Employee ID is stored', User::findById($pendingId)['employee_id'] === "ADM-$stamp");
+    check('A registration has no Employee ID yet', User::findById($pendingId)['employee_id'] === null);
     check('pending() lists the registration', in_array($pendingId, array_column(User::pending(), 'id')));
     check('countPending() counts at least our 2 registrations', User::countPending() >= 2);
     check('Pending users are NOT in the normal user list', !in_array($pendingId, array_column(User::all(''), 'id')));
     check('Pending users are NOT counted in countByRole()', array_sum(User::countByRole()) === (int) $db->query('SELECT COUNT(*) FROM users WHERE is_approved = 1')->fetchColumn());
-    check('employeeIdTaken() spots a used Employee ID', User::employeeIdTaken("ADM-$stamp") === true);
-    check('employeeIdTaken() ignores the user themselves', User::employeeIdTaken("ADM-$stamp", $pendingId) === false);
-    check('An unused Employee ID is free', User::employeeIdTaken("NOPE-$stamp") === false);
+
+    $empId = "adm$stamp";
+    User::approve($pendingId, $empId);
+    $approved = User::findById($pendingId);
+    check('approve() lets the user in (is_approved = 1)', $approved['is_approved'] == 1);
+    check('approve() stores the Employee ID the Super Admin typed', $approved['employee_id'] === $empId);
+    check('findByEmployeeId() finds the user by ID', User::findByEmployeeId($empId)['id'] == $pendingId);
+    check('findByEmployeeId() ignores upper/lower case', User::findByEmployeeId(strtoupper($empId))['id'] == $pendingId);
+    check('findByEmployeeId() returns null for an unknown ID', User::findByEmployeeId("nobody$stamp") === null);
+    check('employeeIdTaken() spots a used Employee ID', User::employeeIdTaken($empId) === true);
+    check('employeeIdTaken() ignores the user themselves', User::employeeIdTaken($empId, $pendingId) === false);
+    check('An unused Employee ID is free', User::employeeIdTaken("nope$stamp") === false);
     try {
-        User::create('Dup', "admintest_dup_$stamp@example.com", 'Password123!', 'applicant', "ADM-$stamp", 0);
+        User::create('Dup', "admintest_dup_$stamp@example.com", 'Password123!', 'applicant', $empId, 1);
         check('The database refuses a duplicate Employee ID', false);
     } catch (Exception $dup) {
         check('The database refuses a duplicate Employee ID', true);
     }
-    User::approve($pendingId);
-    check('approve() lets the user in (is_approved = 1)', User::findById($pendingId)['is_approved'] == 1);
     check('An approved user appears in the normal list', in_array($pendingId, array_column(User::all(''), 'id')));
     User::rejectPending($pendingId);
     check('rejectPending() never deletes an APPROVED user', User::findById($pendingId) !== null);
@@ -97,6 +104,12 @@ try {
     check('rejectPending() deletes a pending registration', User::findById($pendingId2) === null);
     User::delete($pendingId);
 
+    check('nextEmployeeId() suggests emp<number> for employees', preg_match('/^emp[0-9]+$/', User::nextEmployeeId('applicant')) === 1);
+    check('nextEmployeeId() suggests hr<number> for HR', preg_match('/^hr[0-9]+$/', User::nextEmployeeId('hr')) === 1);
+    check('nextEmployeeId() suggests super<number> for the Super Admin', preg_match('/^super[0-9]+$/', User::nextEmployeeId('admin')) === 1);
+    check('The suggested ID is never one that is already taken', User::employeeIdTaken(User::nextEmployeeId('applicant')) === false);
+
+    // --- report ---
     // --- report ---
     Application::changeStatus($applicationId, 'Screening', $hrId, 'Interview on 20 Nov at 10am, online (Teams link).');
     $rows = Report::stageReport(['vacancy_id' => $vacancyId]);

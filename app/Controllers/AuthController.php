@@ -20,19 +20,19 @@ class AuthController
 
     public function login()
     {
-        $email = trim($_POST['email'] ?? '');
+        $employeeId = trim($_POST['employee_id'] ?? '');
         $password = $_POST['password'] ?? '';
         $errors = [];
         $user = null;
 
-        if ($email === '' || $password === '') {
-            $errors[] = 'Please enter both email and password.';
+        if ($employeeId === '' || $password === '') {
+            $errors[] = 'Please enter both your Employee ID and password.';
         } else {
-            $user = User::findByEmail($email);
-            // Same message for "no such email" and "wrong password",
-            // so attackers can't find out which emails are registered.
+            $user = User::findByEmployeeId($employeeId);
+            // Same message for "no such Employee ID" and "wrong password",
+            // so attackers can't find out which IDs exist.
             if ($user === null || !password_verify($password, $user['password_hash'])) {
-                $errors[] = 'Incorrect email or password.';
+                $errors[] = 'Incorrect Employee ID or password.';
             } elseif ($user['is_approved'] != 1) {
                 // Registered, but the Super Admin has not approved the account yet.
                 $errors[] = 'Your registration is waiting for approval by the Super Admin. You can log in once it has been approved.';
@@ -65,22 +65,19 @@ class AuthController
         require __DIR__ . '/../Views/auth/signup.php';
     }
 
-    // Register as an employee. The account is created as PENDING, so nobody is logged in
-    // and nothing can be seen until the Super Admin approves it.
+    // Register as an employee. There is no Employee ID yet: the Super Admin assigns it when
+    // approving. The account is created as PENDING, so nobody is logged in and nothing can
+    // be seen until then.
     public function signup()
     {
-        $employeeId = trim($_POST['employee_id'] ?? '');
         $name = trim($_POST['name'] ?? '');
         $email = trim($_POST['email'] ?? '');
         $password = $_POST['password'] ?? '';
         $passwordConfirm = $_POST['password_confirm'] ?? '';
         $errors = [];
 
-        if ($employeeId === '' || $name === '' || $email === '' || $password === '') {
+        if ($name === '' || $email === '' || $password === '') {
             $errors[] = 'All fields are required.';
-        }
-        if ($employeeId !== '' && !preg_match('/^[A-Za-z0-9_-]{2,30}$/', $employeeId)) {
-            $errors[] = 'Employee ID may only contain letters, numbers, - and _ (2 to 30 characters).';
         }
         if (!filter_var($email, FILTER_VALIDATE_EMAIL)) {
             $errors[] = 'Please enter a valid email address.';
@@ -94,22 +91,20 @@ class AuthController
         if ($email !== '' && User::emailExists($email)) {
             $errors[] = 'An account with this email already exists.';
         }
-        if ($employeeId !== '' && User::employeeIdTaken($employeeId)) {
-            $errors[] = 'An account with this Employee ID already exists.';
-        }
 
         if (!empty($errors)) {
             $_SESSION['errors'] = $errors;
-            $_SESSION['old'] = ['employee_id' => $employeeId, 'name' => $name, 'email' => $email];
+            $_SESSION['old'] = ['name' => $name, 'email' => $email];
             header('Location: index.php?route=signup');
             exit;
         }
 
-        // Always an employee (role 'applicant') and always pending (is_approved = 0):
-        // nobody can register themselves as HR or admin, or skip the approval.
-        User::create($name, $email, $password, 'applicant', $employeeId, 0);
+        // Always an employee (role 'applicant'), always pending (is_approved = 0), and no
+        // Employee ID: nobody can register themselves as HR/admin, skip the approval, or
+        // pick their own ID.
+        User::create($name, $email, $password, 'applicant', null, 0);
 
-        $_SESSION['success'] = 'Thank you, ' . $name . '. Your registration was received and is waiting for approval by the Super Admin. You can log in once it has been approved.';
+        $_SESSION['success'] = 'Thank you, ' . $name . '. Your registration was received. The Super Admin will approve your account and give you an Employee ID - use that ID and your password to log in.';
         header('Location: index.php?route=login');
         exit;
     }
