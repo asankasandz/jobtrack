@@ -157,7 +157,7 @@ class ApplicationController
     // HR: move an application to its next stage (UC-02).
     public function advance()
     {
-        Auth::requireRole('hr');
+        Auth::requireStaff();
         $id = (int) ($_POST['id'] ?? 0);
         $newStatus = $_POST['new_status'] ?? '';
         $note = trim($_POST['note'] ?? '');
@@ -190,7 +190,7 @@ class ApplicationController
         }
 
         $isOwner = Auth::isApplicant() && $application['applicant_id'] == Auth::id();
-        if (!Auth::isHr() && !$isOwner) {
+        if (!Auth::isStaff() && !$isOwner) {
             http_response_code(403);
             echo '<h1>403 Forbidden</h1>';
             return;
@@ -214,7 +214,7 @@ class ApplicationController
     // HR dashboard: summary numbers + every application.
     public function hrDashboard()
     {
-        Auth::requireRole('hr');
+        Auth::requireStaff();
         $applications = Application::forHr();
 
         // Add the status history (with notes) to each application.

@@ -52,6 +52,7 @@ jobs:
         run: |
           php database/smoke_test.php | tee smoke.log
           php database/smoke_test_image.php | tee -a smoke.log
+          php database/smoke_test_admin.php | tee -a smoke.log
           ! grep -q '\[FAIL\]' smoke.log
 
   deploy:
@@ -104,7 +105,13 @@ jobs:
             if ! sudo mysql jobtrack -e "SELECT 1 FROM users LIMIT 1" >/dev/null 2>&1; then
               echo "First deploy: creating tables"
               sudo mysql jobtrack < database/schema.sql
-            fi'
+            fi
+            # Apply any database upgrades. Every migrate_*.php checks first and does
+            # nothing if its change is already in place, so this is safe on every deploy.
+            for f in database/migrate_*.php; do
+              echo "--- $f"
+              php "$f"
+            done'
 
       - name: Health check
         env:

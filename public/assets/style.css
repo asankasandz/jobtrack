@@ -55,7 +55,7 @@ textarea { height: 90px; padding: 8px 10px; resize: vertical; }
 .tline { width: 30px; height: 2px; background: #cdd4e0; }
 
 .hr-wrap { display: flex; min-height: 100vh; }
-.hr-sidebar { width: 170px; background: #1a2744; color: #cdd6ea; padding: 14px 0; }
+.hr-sidebar { width: 200px; background: #1a2744; color: #cdd6ea; padding: 14px 0; }
 .hr-nav-item { font-size: 13px; padding: 12px 18px; display: block; }
 .hr-nav-item.active { background: #2c3f66; color: #fff; font-weight: 700; border-left: 4px solid #5b9bff; }
 .hr-main { flex: 1; padding: 24px; background: #f6f8fc; }
@@ -82,3 +82,68 @@ textarea { height: 90px; padding: 8px 10px; resize: vertical; }
 .hr-history summary { cursor: pointer; color: #35547f; }
 .hr-history ul { margin: 8px 0 0 18px; }
 .hr-history li { margin-bottom: 4px; }
+
+/* ================================================================
+   Super Admin + shared staff layout
+   ================================================================ */
+.side-brand { font-size: 17px; font-weight: 800; color: #fff; padding: 6px 18px 18px 18px; letter-spacing: 0.3px; }
+.side-brand span { display: block; font-size: 11px; font-weight: 600; color: #8fa3cc; margin-top: 2px; letter-spacing: 1px; text-transform: uppercase; }
+.hr-nav-item:hover { background: #22345a; color: #fff; }
+.userbar { text-align: right; font-size: 12px; color: #8894a8; margin-bottom: 10px; }
+.muted { color: #8894a8; font-size: 12.5px; }
+
+/* HR note box + what the applicant sees */
+.note-box { width: 230px; height: auto; padding: 6px 8px; font-size: 11.5px; resize: vertical; }
+.latest-note { margin-top: 10px; padding: 10px 12px; background: #eef3fb; border-left: 4px solid #35547f; border-radius: 4px; font-size: 13px; color: #1f3864; }
+
+/* Big stat cards (like the sample dashboard) */
+.stat-card.big { position: relative; padding: 20px 22px; min-width: 190px; }
+.stat-card.big .stat-num { font-size: 34px; }
+.stat-card.big .stat-title { font-size: 17px; color: #1f3864; margin-top: 2px; }
+.stat-card.big .stat-sub { font-size: 12px; color: #8894a8; margin-top: 6px; }
+.stat-icon { position: absolute; top: 16px; right: 18px; width: 42px; height: 42px; border-radius: 10px;
+  background: #eef3fb; display: flex; align-items: center; justify-content: center; font-size: 20px; }
+
+/* Panels, charts, tables */
+.panel { background: #fff; border-radius: 8px; padding: 18px 20px; margin-bottom: 20px; box-shadow: 0 2px 8px rgba(0,0,0,0.06); }
+.panel-head { display: flex; align-items: baseline; gap: 12px; margin-bottom: 14px; padding-bottom: 12px; border-bottom: 1px solid #eef0f5; }
+.panel-head h2 { font-size: 17px; color: #1f3864; }
+.panel-head span, .panel-head a { font-size: 13px; color: #8894a8; margin-left: auto; }
+.panel-head h2 + span { margin-left: 0; }
+.panel-head a { color: #35547f; }
+.grid-2 { display: grid; grid-template-columns: 1fr 1fr; gap: 20px; }
+.grid-2 .panel { margin-bottom: 20px; min-width: 0; }
+.chart-wrap { position: relative; height: 280px; }
+
+.tbl-wrap { overflow-x: auto; }
+.tbl { width: 100%; border-collapse: collapse; font-size: 13px; }
+.tbl th { text-align: left; font-size: 11.5px; text-transform: uppercase; letter-spacing: 0.5px; color: #8894a8; padding: 8px 10px; border-bottom: 2px solid #eef0f5; white-space: nowrap; }
+.tbl td { padding: 10px; border-bottom: 1px solid #eef0f5; vertical-align: top; }
+.tbl tr:hover td { background: #fafbfe; }
+.note-cell { max-width: 280px; min-width: 140px; color: #444; }
+
+/* Users page */
+.toolbar { display: flex; justify-content: space-between; align-items: center; gap: 12px; flex-wrap: wrap; margin-bottom: 14px; }
+.tabs { display: flex; gap: 6px; flex-wrap: wrap; }
+.tabs a { padding: 7px 14px; border-radius: 18px; background: #fff; border: 1px solid #dbe1ee; font-size: 12.5px; color: #35547f; font-weight: 600; }
+.tabs a.active { background: #1f3864; border-color: #1f3864; color: #fff; }
+.role, .status { display: inline-block; font-size: 11px; font-weight: 700; padding: 4px 10px; border-radius: 12px; }
+.role-admin { background: #fbe9d4; color: #a35a00; } .role-hr { background: #e4ecfb; color: #1f3864; } .role-applicant { background: #eef0f5; color: #5a6578; }
+.status-on { background: #e6f6ec; color: #2e9e5b; } .status-off { background: #fdecea; color: #c0392b; }
+.tbl .hr-actions form { display: inline; }
+
+/* Report filters */
+.filters { display: flex; gap: 14px; flex-wrap: wrap; align-items: flex-end; }
+.filters > div { min-width: 150px; }
+.filters .field-label { margin: 0 0 5px 0; }
+.filters input[type=date], .filters select { height: 36px; }
+.filter-buttons { display: flex; gap: 8px; margin-left: auto; }
+.filter-buttons a { display: inline-block; }
+
+@media (max-width: 900px) {
+  .grid-2 { grid-template-columns: 1fr; }
+  .hr-wrap { flex-direction: column; }
+  .hr-sidebar { width: 100%; display: flex; flex-wrap: wrap; padding: 8px; }
+  .side-brand { width: 100%; padding-bottom: 8px; }
+  .hr-nav-item { padding: 8px 12px; }
+}

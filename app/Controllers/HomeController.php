@@ -5,9 +5,9 @@ class HomeController
 {
     public function index()
     {
-        // HR has nothing to do on the public page - send them to their dashboard.
-        if (Auth::isHr()) {
-            header('Location: index.php?route=hr.dashboard');
+        // HR and the Super Admin have nothing to do on the public page - send them to their dashboard.
+        if (Auth::isStaff()) {
+            header('Location: index.php?route=' . (Auth::isAdmin() ? 'admin.dashboard' : 'hr.dashboard'));
             exit;
         }
 

@@ -7,7 +7,7 @@ class VacancyController
     // List every vacancy.
     public function manage()
     {
-        Auth::requireRole('hr');
+        Auth::requireStaff();
         $vacancies = Vacancy::allForHr();
         $errors = $_SESSION['errors'] ?? [];
         unset($_SESSION['errors']);
@@ -17,7 +17,7 @@ class VacancyController
     // Show the empty "New Vacancy" form.
     public function showCreate()
     {
-        Auth::requireRole('hr');
+        Auth::requireStaff();
         $vacancy = null;
         $errors = $_SESSION['errors'] ?? [];
         $old = $_SESSION['old'] ?? [];
@@ -28,7 +28,7 @@ class VacancyController
     // Save a new vacancy.
     public function store()
     {
-        Auth::requireRole('hr');
+        Auth::requireStaff();
 
         $data = $this->getFormData();
         $data['status'] = 'open';
@@ -61,7 +61,7 @@ class VacancyController
     // Show the "Edit Vacancy" form, filled with the current values.
     public function showEdit()
     {
-        Auth::requireRole('hr');
+        Auth::requireStaff();
         $id = (int) ($_GET['id'] ?? 0);
         $vacancy = Vacancy::find($id);
 
@@ -79,7 +79,7 @@ class VacancyController
     // Save changes to an existing vacancy.
     public function update()
     {
-        Auth::requireRole('hr');
+        Auth::requireStaff();
         $id = (int) ($_POST['id'] ?? 0);
 
         $data = $this->getFormData();
@@ -115,7 +115,7 @@ class VacancyController
     // Delete a vacancy - but not if people have already applied to it.
     public function destroy()
     {
-        Auth::requireRole('hr');
+        Auth::requireStaff();
         $id = (int) ($_POST['id'] ?? 0);
 
         if (Vacancy::hasApplications($id)) {

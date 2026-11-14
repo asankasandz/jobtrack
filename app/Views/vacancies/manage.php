@@ -7,15 +7,9 @@
 </head>
 <body>
 <div class="hr-wrap">
-  <div class="hr-sidebar">
-    <a class="hr-nav-item" href="index.php?route=hr.dashboard">Dashboard</a>
-    <a class="hr-nav-item active" href="index.php?route=vacancies.manage">Vacancies</a>
-    <a class="hr-nav-item" href="index.php?route=hr.dashboard">Applications</a>
-  </div>
+  <?php $activePage = 'vacancies.manage'; require __DIR__ . '/../partials/staff_sidebar.php'; ?>
   <div class="hr-main">
-    <div style="text-align:right; font-size:12px; color:#8894a8; margin-bottom:10px;">
-      <?= htmlspecialchars($_SESSION['user_name']) ?> (HR) &nbsp;|&nbsp; <a href="index.php?route=logout">Log out</a>
-    </div>
+    <?php require __DIR__ . '/../partials/staff_userbar.php'; ?>
     <div class="h1">Manage Vacancies</div>
     <?php if (!empty($errors)): ?>
       <div class="alert alert-error"><?php foreach ($errors as $e): ?><div><?= htmlspecialchars($e) ?></div><?php endforeach; ?></div>
@@ -40,6 +34,7 @@
         <div class="hr-actions">
           <a href="index.php?route=vacancies.edit&id=<?= (int) $v['id'] ?>"><button class="btn-sm neutral">Edit</button></a>
           <form method="post" action="index.php?route=vacancies.delete" onsubmit="return confirm('Delete this vacancy?');">
+            <?= Auth::csrfField() ?>
             <input type="hidden" name="id" value="<?= (int) $v['id'] ?>">
             <button type="submit" class="btn-sm danger">Delete</button>
           </form>

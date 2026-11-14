@@ -30,6 +30,9 @@ class AuthController
             // so attackers can't find out which emails are registered.
             if ($user === null || !password_verify($password, $user['password_hash'])) {
                 $errors[] = 'Incorrect email or password.';
+            } elseif ($user['is_active'] != 1) {
+                // Deactivated by the Super Admin (password was correct, account is switched off).
+                $errors[] = 'This account has been deactivated. Please contact the administrator.';
             }
         }
 
@@ -107,6 +110,9 @@ class AuthController
 
     private function dashboardFor($role)
     {
+        if ($role === 'admin') {
+            return 'admin.dashboard';
+        }
         if ($role === 'hr') {
             return 'hr.dashboard';
         }

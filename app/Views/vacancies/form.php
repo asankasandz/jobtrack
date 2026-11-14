@@ -7,11 +7,7 @@
 </head>
 <body>
 <div class="hr-wrap">
-  <div class="hr-sidebar">
-    <a class="hr-nav-item" href="index.php?route=hr.dashboard">Dashboard</a>
-    <a class="hr-nav-item active" href="index.php?route=vacancies.manage">Vacancies</a>
-    <a class="hr-nav-item" href="index.php?route=hr.dashboard">Applications</a>
-  </div>
+  <?php $activePage = 'vacancies.manage'; require __DIR__ . '/../partials/staff_sidebar.php'; ?>
   <div class="hr-main">
     <div class="h1"><?= $vacancy ? 'Edit Vacancy' : 'New Vacancy' ?></div>
     <div class="card" style="max-width:600px;">
@@ -19,6 +15,7 @@
         <div class="alert alert-error"><?php foreach ($errors as $e): ?><div><?= htmlspecialchars($e) ?></div><?php endforeach; ?></div>
       <?php endif; ?>
       <form method="post" action="index.php?route=<?= $vacancy ? 'vacancies.update' : 'vacancies.store' ?>" enctype="multipart/form-data">
+        <?= Auth::csrfField() ?>
         <?php if ($vacancy): ?><input type="hidden" name="id" value="<?= (int) $vacancy['id'] ?>"><?php endif; ?>
         <div class="field">
           <label class="field-label">Title</label>

@@ -17,11 +17,13 @@ require_once __DIR__ . '/../app/Models/User.php';
 require_once __DIR__ . '/../app/Models/Vacancy.php';
 require_once __DIR__ . '/../app/Models/Application.php';
 require_once __DIR__ . '/../app/Models/ApplicationStageHistory.php';
+require_once __DIR__ . '/../app/Models/Report.php';
 
 require_once __DIR__ . '/../app/Controllers/HomeController.php';
 require_once __DIR__ . '/../app/Controllers/AuthController.php';
 require_once __DIR__ . '/../app/Controllers/VacancyController.php';
 require_once __DIR__ . '/../app/Controllers/ApplicationController.php';
+require_once __DIR__ . '/../app/Controllers/AdminController.php';
 
 // ---- 2. Start the session ----
 Auth::start();
@@ -31,12 +33,17 @@ $home = new HomeController();
 $auth = new AuthController();
 $vacancies = new VacancyController();
 $applications = new ApplicationController();
+$admin = new AdminController();
 
 $route = $_GET['route'] ?? 'home';
 
 // POST = a form was submitted (something will be saved or changed).
 // GET  = just show a page.
 if ($_SERVER['REQUEST_METHOD'] === 'POST') {
+
+    // Every form must carry the secret CSRF token (see Auth::csrfField()),
+    // otherwise a form posted from another website could act on the user's behalf.
+    Auth::checkCsrf();
 
     switch ($route) {
         // Authentication
@@ -52,6 +59,12 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
         case 'applications.store':     $applications->store(); break;
         case 'applications.withdraw':  $applications->withdraw(); break;
         case 'applications.advance':   $applications->advance(); break;
+
+        // Super Admin: user management
+        case 'admin.users.store':      $admin->store(); break;
+        case 'admin.users.update':     $admin->update(); break;
+        case 'admin.users.toggle':     $admin->toggle(); break;
+        case 'admin.users.delete':     $admin->destroy(); break;
 
         default:                       pageNotFound($route);
     }
@@ -80,6 +93,14 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
         // Dashboards (one for each role)
         case 'hr.dashboard':           $applications->hrDashboard(); break;
         case 'applicant.dashboard':    $applications->applicantDashboard(); break;
+
+        // Super Admin
+        case 'admin.dashboard':        $admin->dashboard(); break;
+        case 'admin.users':            $admin->users(); break;
+        case 'admin.users.create':     $admin->showCreate(); break;
+        case 'admin.users.edit':       $admin->showEdit(); break;
+        case 'admin.reports':          $admin->reports(); break;
+        case 'admin.reports.csv':      $admin->reportsCsv(); break;
 
         default:                       pageNotFound($route);
     }

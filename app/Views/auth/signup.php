@@ -15,6 +15,7 @@
       </div>
     <?php endif; ?>
     <form method="post" action="index.php?route=signup&next=<?= urlencode($_GET['next'] ?? '') ?>">
+      <?= Auth::csrfField() ?>
       <div class="field">
         <label class="field-label">Full Name</label>
         <input type="text" name="name" value="<?= htmlspecialchars($old['name'] ?? '') ?>" required>

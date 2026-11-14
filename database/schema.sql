@@ -3,7 +3,8 @@ CREATE TABLE users (
     name            VARCHAR(100) NOT NULL,
     email           VARCHAR(150) NOT NULL UNIQUE,
     password_hash   VARCHAR(255) NOT NULL,
-    role            ENUM('applicant','hr') NOT NULL,
+    role            ENUM('applicant','hr','admin') NOT NULL,
+    is_active       TINYINT(1) NOT NULL DEFAULT 1,
     created_at      DATETIME NOT NULL DEFAULT CURRENT_TIMESTAMP
 );
 

@@ -33,6 +33,19 @@ $stageOrder = ['Applied', 'Screening', 'InterviewScheduled', 'InterviewCompleted
         <span class="badge b-<?= strtolower($app['status']) ?>"><?= htmlspecialchars($app['status']) ?></span>
       </div>
 
+      <?php
+      // The newest note written by HR (history is oldest first, so keep the last one found).
+      $latestNote = '';
+      foreach ($app['history'] as $h) {
+          if (!empty($h['note']) && $h['from_status'] !== null) {
+              $latestNote = $h['note'];
+          }
+      }
+      ?>
+      <?php if ($latestNote !== ''): ?>
+        <div class="latest-note"><b>Latest update from HR:</b><br><?= nl2br(htmlspecialchars($latestNote)) ?></div>
+      <?php endif; ?>
+
       <?php if (in_array($app['status'], $stageOrder, true)): ?>
         <div class="timeline">
           <?php foreach ($stageOrder as $i => $stage):
@@ -50,7 +63,7 @@ $stageOrder = ['Applied', 'Screening', 'InterviewScheduled', 'InterviewCompleted
             <li><?= htmlspecialchars($h['from_status'] ?? 'start') ?> &rarr; <?= htmlspecialchars($h['to_status']) ?>
               (<?= htmlspecialchars($h['changed_at']) ?>)
               <?php if (!empty($h['note'])): ?>
-                <div class="hist-note">Note: <?= htmlspecialchars($h['note']) ?></div>
+                <div class="hist-note">Note: <?= nl2br(htmlspecialchars($h['note'])) ?></div>
               <?php endif; ?>
             </li>
           <?php endforeach; ?>
@@ -60,6 +73,7 @@ $stageOrder = ['Applied', 'Screening', 'InterviewScheduled', 'InterviewCompleted
       <?php if (!in_array($app['status'], ['Offered', 'Rejected', 'Withdrawn'], true)): ?>
         <form method="post" action="index.php?route=applications.withdraw" style="margin-top:10px;"
               onsubmit="return confirm('Withdraw this application?');">
+          <?= Auth::csrfField() ?>
           <input type="hidden" name="id" value="<?= (int) $app['id'] ?>">
           <button type="submit" class="btn-sm danger">Withdraw</button>
         </form>

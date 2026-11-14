@@ -6,7 +6,7 @@ Last updated: 2026-11-12.
 ## What this is
 
 MIT4301 Independent Study project. Plain PHP (no framework), hand-written MVC, MySQL via PDO,
-running on XAMPP. Two roles: **Applicant** (self-registers) and **HR Staff** (seeded, not public
+running on XAMPP. Three roles: **Applicant** (self-registers), **HR Staff** and **Super Admin** (both seeded, not public
 sign-up — see Security Decisions below).
 
 Built initially for an **interim progress demo** requiring: (1) working login + sign-up, (2) all
@@ -37,7 +37,7 @@ interview-project/
       Database.php           PDO singleton (prepared statements only, EMULATE_PREPARES off)
       Auth.php                 session helpers; requireRole() is the server-side authorization gate
     Models/
-      User.php, Vacancy.php, Application.php, ApplicationStageHistory.php
+      User.php, Vacancy.php, Application.php, ApplicationStageHistory.php, Report.php (read-only dashboard/report queries)
     Controllers/
       HomeController.php      public landing page
       AuthController.php      login, signup (applicant-only), logout
@@ -49,7 +49,9 @@ interview-project/
   database/
     schema.sql                 source-of-truth DDL (keep in sync with real migrations below)
     migrate_add_vacancy_image.php   one-off migration already applied to the live DB
-    seed.php                    creates the HR account: php seed.php <email> <password> ["Name"]
+    seed.php                    creates the first HR or Super Admin account: php seed.php <email> <password> ["Name"] [hr|admin]
+    migrate_add_admin_role.php  adds role 'admin' + users.is_active (idempotent; the deploy workflow runs every migrate_*.php)
+    smoke_test_admin.php        28-check test of user management + reports (model level)
     smoke_test.php               15-check end-to-end test of auth/vacancy/application logic (self-cleaning)
     smoke_test_image.php          4-check test of vacancy image_path create/update/keep-old-image behaviour
   storage/
@@ -101,7 +103,6 @@ an invalid jump (Applied → Offered) is rejected.
 
 ## Known gaps / not yet done
 
-- No CSRF tokens on forms (acceptable for an interim demo; would be a real gap for a production app)
 - No rate-limiting on login attempts
 - Chapter 2 (UI Design rationale) documents a single consistent colour system "across every
   screen" — the landing page was added afterward with an intentionally different scheme (now
@@ -127,3 +128,19 @@ MVC + security: no namespaces/`use`/autoloader (plain `require_once`), no Router
 `index.php`), no type declarations, no class constants, no closures/arrow functions. Upload checks are
 plain `checkX()` (returns error message or '') + `saveX()` helpers; `mime_content_type()` checks the
 real file type; `uniqid()` names files. Keep new code in this same style.
+
+## Super Admin (added 2026-11-14)
+
+- Role `admin` = everything HR can do (HR pages use `Auth::requireStaff()`) PLUS user management and reports.
+- Create the first one: `php database/seed.php boss@example.com "StrongPass1" "Super Admin" admin` (never via sign-up).
+- Pages (`AdminController`, views in `app/Views/admin/`, shared sidebar in `app/Views/partials/`):
+  `admin.dashboard` (stat cards + Chart.js line chart of the last 30 days + stage bar chart + latest activity),
+  `admin.users` / `.create` / `.edit` (add, edit, change role, reset password), `admin.users.toggle` (deactivate/activate),
+  `admin.users.delete`, `admin.reports` (stage-by-stage: applicant name+email, vacancy, stage, Passed/Failed/Withdrawn, HR note, decided by; filters; CSV download via `admin.reports.csv`).
+- **Deactivate vs delete:** a user with vacancies/applications/history cannot be deleted (foreign keys) — they are deactivated
+  (`users.is_active = 0`): cannot log in, and an already-open session is logged out on the next request (`Auth::requireLogin()` re-checks the DB).
+  The admin cannot delete/deactivate themselves or change their own role.
+- **CSRF:** every POST is checked centrally in `public/index.php` (`Auth::checkCsrf()`); every form includes `Auth::csrfField()`. New forms MUST include it.
+- **HR notes:** the note typed when advancing a stage (interview date/time/venue/link) is shown to the applicant (latest note on the card + full history) and to HR/admin (history section, reports).
+- CSV export prefixes cells starting with = + - @ with an apostrophe (spreadsheet formula injection).
+- Production: the deploy runs `database/migrate_*.php` automatically; the admin account itself is created once by hand on the server with seed.php.

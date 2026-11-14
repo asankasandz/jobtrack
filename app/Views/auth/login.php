@@ -15,6 +15,7 @@
       </div>
     <?php endif; ?>
     <form method="post" action="index.php?route=login&next=<?= urlencode($_GET['next'] ?? '') ?>">
+      <?= Auth::csrfField() ?>
       <div class="field">
         <label class="field-label">Email</label>
         <input type="email" name="email" required>
