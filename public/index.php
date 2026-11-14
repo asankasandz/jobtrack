@@ -48,6 +48,7 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
     switch ($route) {
         // Authentication
         case 'login':                  $auth->login(); break;
+        case 'signup':                 $auth->signup(); break;
 
         // Vacancies (HR)
         case 'vacancies.store':        $vacancies->store(); break;
@@ -64,6 +65,8 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
         case 'admin.users.update':     $admin->update(); break;
         case 'admin.users.toggle':     $admin->toggle(); break;
         case 'admin.users.delete':     $admin->destroy(); break;
+        case 'admin.users.approve':    $admin->approve(); break;
+        case 'admin.users.reject':     $admin->reject(); break;
 
         default:                       pageNotFound($route);
     }
@@ -76,6 +79,7 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
 
         // Authentication
         case 'login':                  $auth->showLogin(); break;
+        case 'signup':                 $auth->showSignup(); break;
         case 'logout':                 $auth->logout(); break;
 
         // Vacancies (HR)

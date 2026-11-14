@@ -4,6 +4,7 @@ $isMe = ($user !== null && $user['id'] == Auth::id());
 $current = [
     'name'  => $user['name']  ?? $old['name']  ?? '',
     'email' => $user['email'] ?? $old['email'] ?? '',
+    'employee_id' => $user['employee_id'] ?? $old['employee_id'] ?? '',
     'role'  => $user['role']  ?? $old['role']  ?? 'applicant',
 ];
 ?>
@@ -41,6 +42,10 @@ $current = [
         <div class="field">
           <label class="field-label">Email</label>
           <input type="email" name="email" value="<?= htmlspecialchars($current['email']) ?>" required>
+        </div>
+        <div class="field">
+          <label class="field-label">Employee ID <span class="muted">(optional)</span></label>
+          <input type="text" name="employee_id" maxlength="30" value="<?= htmlspecialchars($current['employee_id']) ?>">
         </div>
         <div class="field">
           <label class="field-label">Role</label>

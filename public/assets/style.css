@@ -230,3 +230,12 @@ textarea { height: 90px; padding: 8px 10px; resize: vertical; }
   .user-chip b, .user-chip small { display: none; }
 }
 @media (max-width: 560px) { .cards4 { grid-template-columns: 1fr; } .search { width: 100%; } .filter-buttons { margin-left: 0; } }
+
+/* ---- Registration approval ---- */
+.status-pending { background: #fff4d6; color: #8a5a00; }
+.tabs a.has-pending { background: #fff4d6; color: #8a5a00; } .tabs a.has-pending span { background: #fff; }
+.tabs a.has-pending.active { background: #1f3864; color: #fff; } .tabs a.has-pending.active span { background: rgba(255,255,255,.2); color: #fff; }
+.nav-badge { margin-left: auto; min-width: 20px; height: 20px; padding: 0 6px; border-radius: 10px; background: #f0a020; color: #3a2600; font-size: 11px; font-weight: 800; display: inline-flex; align-items: center; justify-content: center; }
+.pending-banner { display: block; margin-bottom: 18px; padding: 13px 18px; background: #fff4d6; border: 1px solid #f0d9a0; border-radius: 10px; color: #6b4600; font-size: 14px; }
+.pending-banner:hover { background: #ffeec2; }
+.login-card .muted { font-size: 12.5px; line-height: 1.5; }

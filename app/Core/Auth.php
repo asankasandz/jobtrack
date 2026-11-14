@@ -84,7 +84,7 @@ class Auth
         // deactivated user is logged out at once (even with the session still
         // open) and a role change by the Super Admin applies immediately.
         $user = User::findById($_SESSION['user_id']);
-        if ($user === null || $user['is_active'] != 1) {
+        if ($user === null || $user['is_active'] != 1 || $user['is_approved'] != 1) {
             unset($_SESSION['user_id'], $_SESSION['user_name'], $_SESSION['user_role']);
             $_SESSION['errors'] = ['Your account is not active. Please contact the administrator.'];
             header('Location: index.php?route=login');

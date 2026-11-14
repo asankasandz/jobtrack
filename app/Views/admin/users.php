@@ -15,7 +15,7 @@
     <div class="page-head page-head-row">
       <div>
         <div class="h1">Users</div>
-        <p class="page-sub">Only you can create accounts: add, edit, deactivate or delete employees, HR staff and administrators.</p>
+        <p class="page-sub">Approve new registrations, or add, edit, deactivate and delete accounts for employees, HR staff and administrators.</p>
       </div>
       <a class="btn-primary" href="index.php?route=admin.users.create">+ Add User</a>
     </div>
@@ -34,6 +34,7 @@
           <a class="<?= $role === 'admin' ? 'active' : '' ?>" href="index.php?route=admin.users&role=admin">Super Admins <span><?= $counts['admin'] ?></span></a>
           <a class="<?= $role === 'hr' ? 'active' : '' ?>" href="index.php?route=admin.users&role=hr">HR staff <span><?= $counts['hr'] ?></span></a>
           <a class="<?= $role === 'applicant' ? 'active' : '' ?>" href="index.php?route=admin.users&role=applicant">Employees <span><?= $counts['applicant'] ?></span></a>
+          <a class="<?= $role === 'pending' ? 'active' : '' ?> <?= $pendingCount > 0 ? 'has-pending' : '' ?>" href="index.php?route=admin.users&role=pending">Pending approval <span><?= $pendingCount ?></span></a>
         </div>
         <input type="search" id="userSearch" class="search" placeholder="Search name or email...">
       </div>
@@ -52,13 +53,35 @@
                     <div>
                       <b><?= htmlspecialchars($u['name']) ?><?= $isMe ? ' <span class="you">you</span>' : '' ?></b>
                       <small><?= htmlspecialchars($u['email']) ?></small>
+                      <?php if (!empty($u['employee_id'])): ?><small>Employee ID: <?= htmlspecialchars($u['employee_id']) ?></small><?php endif; ?>
                     </div>
                   </div>
                 </td>
                 <td><span class="role role-<?= htmlspecialchars($u['role']) ?>"><?= $u['role'] === 'admin' ? 'Super Admin' : ($u['role'] === 'hr' ? 'HR' : 'Employee') ?></span></td>
-                <td><span class="status <?= $u['is_active'] == 1 ? 'status-on' : 'status-off' ?>"><?= $u['is_active'] == 1 ? 'Active' : 'Inactive' ?></span></td>
+                <td>
+                  <?php if ($role === 'pending'): ?>
+                    <span class="status status-pending">Pending</span>
+                  <?php else: ?>
+                    <span class="status <?= $u['is_active'] == 1 ? 'status-on' : 'status-off' ?>"><?= $u['is_active'] == 1 ? 'Active' : 'Inactive' ?></span>
+                  <?php endif; ?>
+                </td>
                 <td class="nowrap"><?= date('j M Y', strtotime($u['created_at'])) ?></td>
                 <td>
+                  <?php if ($role === 'pending'): ?>
+                  <div class="row-actions">
+                    <form method="post" action="index.php?route=admin.users.approve">
+                      <?= Auth::csrfField() ?>
+                      <input type="hidden" name="id" value="<?= (int) $u['id'] ?>">
+                      <button type="submit" class="act good">Approve</button>
+                    </form>
+                    <form method="post" action="index.php?route=admin.users.reject"
+                          onsubmit="return confirm('Reject this registration? The pending account will be deleted.');">
+                      <?= Auth::csrfField() ?>
+                      <input type="hidden" name="id" value="<?= (int) $u['id'] ?>">
+                      <button type="submit" class="act del">Reject</button>
+                    </form>
+                  </div>
+                  <?php else: ?>
                   <div class="row-actions">
                     <a class="act" href="index.php?route=admin.users.edit&id=<?= (int) $u['id'] ?>">Edit</a>
                     <?php if (!$isMe): ?>
@@ -75,18 +98,28 @@
                       </form>
                     <?php endif; ?>
                   </div>
+                  <?php endif; ?>
                 </td>
               </tr>
             <?php endforeach; ?>
           </tbody>
         </table>
       </div>
+      <?php if (empty($users)): ?>
+        <p class="muted" style="padding:14px 4px;"><?= $role === 'pending' ? 'No registrations are waiting for approval.' : 'No users here yet.' ?></p>
+      <?php endif; ?>
       <p class="no-match muted" id="noMatch" style="display:none;">No users match your search.</p>
 
+      <?php if ($role === 'pending'): ?>
+      <p class="help-note">
+        <b>Tip:</b> check the Employee ID against your staff records, then <b>Approve</b> to let the person log in, or <b>Reject</b> to delete the registration.
+      </p>
+      <?php else: ?>
       <p class="help-note">
         <b>Tip:</b> a user who already has vacancies, applications or history cannot be deleted &mdash; deactivate them instead.
         A deactivated user cannot log in, but all their records stay intact.
       </p>
+      <?php endif; ?>
     </div>
   </div>
 </div>

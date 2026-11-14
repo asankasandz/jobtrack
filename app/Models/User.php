@@ -30,10 +30,12 @@ class User
 
     // Create a user with any role ('applicant' = employee, 'hr' or 'admin').
     // Only the Super Admin creates accounts - there is no public sign-up.
-    public static function create($name, $email, $password, $role)
+    // $approved = 0 is used for self-registration: the account waits for the Super Admin.
+    public static function create($name, $email, $password, $role, $employeeId = null, $approved = 1)
     {
         $stmt = Database::connection()->prepare(
-            'INSERT INTO users (name, email, password_hash, role) VALUES (:name, :email, :password_hash, :role)'
+            'INSERT INTO users (name, email, password_hash, role, employee_id, is_approved)
+             VALUES (:name, :email, :password_hash, :role, :employee_id, :is_approved)'
         );
         $stmt->execute([
             'name' => $name,
@@ -41,6 +43,8 @@ class User
             // Never store the real password - only a secure hash of it.
             'password_hash' => password_hash($password, PASSWORD_DEFAULT),
             'role' => $role,
+            'employee_id' => ($employeeId === '' ? null : $employeeId),
+            'is_approved' => $approved,
         ]);
 
         return Database::connection()->lastInsertId();
@@ -59,14 +63,22 @@ class User
         return $stmt->fetchColumn() > 0;
     }
 
-    // All users for the admin list, newest first. Pass a role to filter, or '' for everyone.
+    // Is this Employee ID used by another account? ($exceptId = the user being edited, 0 for a new one.)
+    public static function employeeIdTaken($employeeId, $exceptId = 0)
+    {
+        $stmt = Database::connection()->prepare('SELECT COUNT(*) FROM users WHERE employee_id = :employee_id AND id != :id');
+        $stmt->execute(['employee_id' => $employeeId, 'id' => $exceptId]);
+        return $stmt->fetchColumn() > 0;
+    }
+
+    // All APPROVED users for the admin list, newest first. Pass a role to filter, or '' for everyone.
     public static function all($role = '')
     {
         $db = Database::connection();
-        $sql = 'SELECT id, name, email, role, is_active, created_at FROM users';
+        $sql = 'SELECT id, name, email, employee_id, role, is_active, created_at FROM users WHERE is_approved = 1';
 
         if ($role !== '') {
-            $stmt = $db->prepare($sql . ' WHERE role = :role ORDER BY created_at DESC');
+            $stmt = $db->prepare($sql . ' AND role = :role ORDER BY created_at DESC');
             $stmt->execute(['role' => $role]);
         } else {
             $stmt = $db->query($sql . ' ORDER BY created_at DESC');
@@ -78,7 +90,7 @@ class User
     public static function countByRole()
     {
         $counts = ['admin' => 0, 'hr' => 0, 'applicant' => 0];
-        $rows = Database::connection()->query('SELECT role, COUNT(*) AS total FROM users GROUP BY role')->fetchAll();
+        $rows = Database::connection()->query('SELECT role, COUNT(*) AS total FROM users WHERE is_approved = 1 GROUP BY role')->fetchAll();
         foreach ($rows as $row) {
             $counts[$row['role']] = (int) $row['total'];
         }
@@ -86,17 +98,45 @@ class User
     }
 
     // Change a user's details. The password is only changed if a new one is given.
-    public static function update($id, $name, $email, $role, $newPassword)
+    public static function update($id, $name, $email, $role, $newPassword, $employeeId = null)
     {
         $db = Database::connection();
 
-        $stmt = $db->prepare('UPDATE users SET name = :name, email = :email, role = :role WHERE id = :id');
-        $stmt->execute(['name' => $name, 'email' => $email, 'role' => $role, 'id' => $id]);
+        $stmt = $db->prepare('UPDATE users SET name = :name, email = :email, role = :role, employee_id = :employee_id WHERE id = :id');
+        $stmt->execute(['name' => $name, 'email' => $email, 'role' => $role, 'employee_id' => ($employeeId === '' ? null : $employeeId), 'id' => $id]);
 
         if ($newPassword !== '') {
             $stmt = $db->prepare('UPDATE users SET password_hash = :hash WHERE id = :id');
             $stmt->execute(['hash' => password_hash($newPassword, PASSWORD_DEFAULT), 'id' => $id]);
         }
+    }
+
+    // People who registered themselves and are waiting for the Super Admin, oldest first.
+    public static function pending()
+    {
+        return Database::connection()->query(
+            'SELECT id, name, email, employee_id, role, created_at FROM users WHERE is_approved = 0 ORDER BY created_at ASC'
+        )->fetchAll();
+    }
+
+    public static function countPending()
+    {
+        return (int) Database::connection()->query('SELECT COUNT(*) FROM users WHERE is_approved = 0')->fetchColumn();
+    }
+
+    // Approve a registration: from now on the user can log in.
+    public static function approve($id)
+    {
+        $stmt = Database::connection()->prepare('UPDATE users SET is_approved = 1 WHERE id = :id');
+        $stmt->execute(['id' => $id]);
+    }
+
+    // Reject a registration: the pending account is removed. (Only pending accounts - an
+    // approved user is never deleted by this, and a pending user has no other records.)
+    public static function rejectPending($id)
+    {
+        $stmt = Database::connection()->prepare('DELETE FROM users WHERE id = :id AND is_approved = 0');
+        $stmt->execute(['id' => $id]);
     }
 
     // Deactivate (0) or re-activate (1) an account. A deactivated user cannot log in.

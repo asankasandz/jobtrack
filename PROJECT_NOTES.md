@@ -6,10 +6,11 @@ Last updated: 2026-11-12.
 ## What this is
 
 MIT4301 Independent Study project. Plain PHP (no framework), hand-written MVC, MySQL via PDO,
-running on XAMPP. **Internal system — there is NO public registration.** Three roles, all created by the Super Admin (or seeded):
-**Employee** (role value `applicant`; logs in and applies for internal vacancies), **HR Staff** and **Super Admin**.
+running on XAMPP. **Internal system.** Three roles: **Employee** (role value `applicant`; registers themselves, then applies for internal
+vacancies), **HR Staff** and **Super Admin** (both created by the Super Admin / seeded, never by registration).
+**Registering does not give access:** a new account is *pending* until the Super Admin approves it.
 
-Built initially for an **interim progress demo** requiring: (1) working login (accounts are created by the Super Admin, no public sign-up), (2) all
+Built initially for an **interim progress demo** requiring: (1) working login + sign-up (sign-up creates a PENDING account that the Super Admin must approve), (2) all
 finalized UIs navigable, (3) two full CRUD features beyond auth. Chosen CRUD features: **Vacancy**
 (full CRUD) and **Application** (Create/Read/Update + controlled Withdraw).
 
@@ -21,7 +22,7 @@ finalized UIs navigable, (3) two full CRUD features beyond auth. Chosen CRUD fea
 - **HR login:** credentials are NOT stored in the repo. Check phpMyAdmin's `users` table (role=`hr`)
   for the email; if the password is lost, reset its `password_hash` there.
   `seed.php` now takes credentials as CLI arguments and does nothing if any HR account already exists.
-- Employee accounts: created by the Super Admin on the Users page (`admin.users.create`). There is no sign-up page.
+- Employee accounts: either self-registered on `signup` (Employee ID, name, email, password -> pending until approved) or created directly by the Super Admin on `admin.users.create` (approved at once).
 
 ## Folder structure
 
@@ -40,7 +41,7 @@ interview-project/
       User.php, Vacancy.php, Application.php, ApplicationStageHistory.php, Report.php (read-only dashboard/report queries)
     Controllers/
       HomeController.php      public landing page
-      AuthController.php      login, logout (no sign-up: internal system)
+      AuthController.php      login, sign-up (creates a PENDING employee), logout
       VacancyController.php   HR full CRUD + image upload handling
       ApplicationController.php  apply, CV upload, status history, withdraw, HR advance/reject, resume download
     Views/
@@ -64,7 +65,7 @@ interview-project/
 | Route | Method | Who | Does |
 |---|---|---|---|
 | `home` | GET | anyone | landing page; HR auto-redirected to `hr.dashboard`. Applicants are NOT redirected away (they legitimately browse/apply here even while logged in) |
-| `login` / `logout` | GET/POST | anyone | auth; login supports `?next=` to return to an intended page after login. Default post-login landing: `hr.dashboard` for HR, `applicant.dashboard` for Applicant |
+| `login` / `signup` / `logout` | GET/POST | anyone | auth; login supports `?next=` to return to an intended page after login. A pending (unapproved) user cannot log in. Default post-login landing: `hr.dashboard` for HR, `applicant.dashboard` for Applicant |
 | `applicant.dashboard` | GET | Applicant | Applicant's own dashboard (counterpart to `hr.dashboard`) — stat cards (open vacancies, my applications, in progress, awaiting decision, offers) + recent applications preview + quick links to browse/My Applications |
 | `vacancies.manage` | GET | HR | list all vacancies |
 | `vacancies.create` / `.store` | GET/POST | HR | create (+ image upload) |
@@ -89,9 +90,10 @@ an invalid jump (Applied → Offered) is rejected.
 
 ## Security decisions worth remembering (will come up in Q&A)
 
-- **No account can be self-registered (internal system).** Only the Super Admin creates accounts (employees, HR, admins) —
-  outsiders cannot sign up, and nobody can grant themselves HR or admin access. Deliberate, not a missing feature.
-- **Vacancies are only visible after login** — guests see the welcome page and a lock panel (the vacancy cards are not in the page HTML).
+- **Registration needs approval (internal system).** Anyone can register, but the account is created with `is_approved = 0` and the role
+  is forced to employee, so outsiders cannot get in and nobody can make themselves HR/admin or skip the approval (extra form fields
+  such as `role=admin` are ignored). The Super Admin approves or rejects on `admin.users&role=pending`; rejecting deletes the account.
+- **The index page (hero + vacancies) is only for logged-in users** — guests are redirected to the login page.
 - **CVs vs vacancy images are stored differently on purpose**: CVs are private (outside `public/`,
   `.htaccess`-denied, served only via an authorised controller method); vacancy images are public
   marketing content (stored inside `public/assets/uploads/...`, linked directly) — different
@@ -133,7 +135,7 @@ real file type; `uniqid()` names files. Keep new code in this same style.
 ## Super Admin (added 2026-11-14)
 
 - Role `admin` = everything HR can do (HR pages use `Auth::requireStaff()`) PLUS user management and reports.
-- Create the first one: `php database/seed.php boss@example.com "StrongPass1" "Super Admin" admin` (the Super Admin then creates everyone else).
+- Create the first one: `php database/seed.php boss@example.com "StrongPass1" "Super Admin" admin` (HR users and further admins are created on the Users page).
 - Pages (`AdminController`, views in `app/Views/admin/`, shared sidebar in `app/Views/partials/`):
   `admin.dashboard` (stat cards + Chart.js line chart of the last 30 days + stage bar chart + latest activity),
   `admin.users` / `.create` / `.edit` (add, edit, change role, reset password), `admin.users.toggle` (deactivate/activate),
@@ -148,9 +150,11 @@ real file type; `uniqid()` names files. Keep new code in this same style.
 
 ## Internal system decision (2026-11-14)
 
-The lecturer pointed out that a system named *internal* must not let outsiders register. Public sign-up was removed:
-`signup` routes, `AuthController::signup()/showSignup()`, `views/auth/signup.php` and `User::createApplicant()` are gone;
-the landing page and login page no longer offer registration. Accounts are created on `admin.users.create` by the Super Admin.
-UI wording: the `applicant` role is called **Employee** (database value unchanged). Existing self-registered accounts can be
-reviewed/deactivated on the Users page. **The report (Chapter 1 use cases / diagrams) must also say "Super Admin creates accounts"
-instead of "Applicant registers".**
+The lecturer said a system named *internal* must not let outsiders in, while the marking criteria still require a sign-up feature.
+Solution: **register -> pending -> Super Admin approves.** `users.employee_id` (unique) and `users.is_approved` (default 1; 0 = pending)
+were added (`database/migrate_add_registration_approval.php`; the deploy workflow runs every `migrate_*.php`). Sign-up asks for Employee ID,
+name, email, password and creates a pending employee; `AuthController::login()` refuses pending users with a clear message;
+`Auth::requireLogin()` also refuses them. The Users page has a **Pending approval** tab (Approve / Reject), the sidebar shows a badge
+and the admin dashboard a banner. The index page (`home`) redirects guests to login. UI wording: role `applicant` is shown as **Employee**.
+**The report (Chapter 1 use cases / diagrams) must show: Employee registers -> Super Admin approves -> Employee logs in.**
+Possible extras: let HR approve too; check the Employee ID against a staff list.

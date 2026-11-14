@@ -2,7 +2,7 @@
 
 MIT4301 Independent Study project. Plain PHP (hand-written MVC, no framework), MySQL via PDO.
 
-- **Employees** log in (accounts are created by the Super Admin — there is no public sign-up), browse internal vacancies, apply with a CV, track every stage and withdraw.
+- **Employees** register with their Employee ID (the Super Admin must approve the account before they can log in), then browse internal vacancies, apply with a CV, track every stage and withdraw.
 - **HR staff** manage vacancies and move applications through a controlled pipeline:
   `Applied → Screening → InterviewScheduled → InterviewCompleted → DecisionPending → Offered | Rejected`
   (`Withdrawn` is reachable from any non-final stage).

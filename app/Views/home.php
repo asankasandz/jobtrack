@@ -33,8 +33,6 @@ $isLoggedIn = !empty($_SESSION['user_id']);
         <a class="btn btn-sm" href="index.php?route=applicant.dashboard">Dashboard</a>
         <a class="btn btn-sm" href="index.php?route=applications.mine">My Applications</a>
         <a class="btn btn-sm btn-solid" href="index.php?route=logout">Log out</a>
-      <?php else: ?>
-        <a class="btn btn-sm btn-solid" href="index.php?route=login">Employee log in</a>
       <?php endif; ?>
     </div>
   </div>
@@ -57,8 +55,6 @@ $isLoggedIn = !empty($_SESSION['user_id']);
         <?php if ($isLoggedIn): ?>
           <a class="btn btn-lg btn-solid" href="#vacancies">View open vacancies &rarr;</a>
           <a class="btn btn-lg" href="index.php?route=applications.mine">Track my applications</a>
-        <?php else: ?>
-          <a class="btn btn-lg btn-solid" href="index.php?route=login">Employee log in &rarr;</a>
         <?php endif; ?>
       </div>
 
@@ -121,17 +117,10 @@ $isLoggedIn = !empty($_SESSION['user_id']);
     <div class="section-head">
       <span class="section-kicker">Opportunities</span>
       <h2 class="section-title">Open vacancies</h2>
-      <p class="section-sub"><?= $isLoggedIn ? 'Open positions in the organisation. Apply with your CV in a few clicks.' : 'Open positions are shown to signed-in employees only.' ?></p>
+      <p class="section-sub">Open positions in the organisation. Apply with your CV in a few clicks.</p>
     </div>
 
-    <?php if (!$isLoggedIn): ?>
-      <div class="empty-state">
-        <div class="icon">&#128274;</div>
-        <strong>Log in to see open vacancies</strong>
-        This is an internal portal. Use the account that HR or your administrator created for you.
-        <p style="margin-top:16px;"><a class="btn btn-solid" href="index.php?route=login">Employee log in</a></p>
-      </div>
-    <?php elseif (empty($vacancies)): ?>
+    <?php if (empty($vacancies)): ?>
       <div class="empty-state">
         <div class="icon">📭</div>
         <strong>No open vacancies right now</strong>
@@ -202,21 +191,6 @@ $isLoggedIn = !empty($_SESSION['user_id']);
     </div>
   </div>
 </section>
-
-<!-- ============ CTA ============ -->
-<?php if (!$isLoggedIn): ?>
-<section class="cta-band">
-  <div class="container">
-    <div class="cta-inner on-dark">
-      <div>
-        <h2>Already have an account?</h2>
-        <p>Log in with the account HR created for you to see open roles and apply.</p>
-      </div>
-      <a class="btn btn-lg btn-solid" href="index.php?route=login">Employee log in</a>
-    </div>
-  </div>
-</section>
-<?php endif; ?>
 
 </main>
 

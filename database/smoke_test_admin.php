@@ -70,6 +70,33 @@ try {
     $applicationId = Application::create($vacancyId, $applicantId, 'fake.pdf', 'Cover.');
     check('An applicant with an application has records', User::hasRecords($applicantId) === true);
 
+    // --- registration approval ---
+    $pendingId = User::create('Admin Test Pending', "admintest_pend_$stamp@example.com", 'Password123!', 'applicant', "ADM-$stamp", 0);
+    $pendingId2 = User::create('Admin Test Pending Two', "admintest_pend2_$stamp@example.com", 'Password123!', 'applicant', "ADM2-$stamp", 0);
+    check('A registration is saved as pending (is_approved = 0)', User::findById($pendingId)['is_approved'] == 0);
+    check('Employee ID is stored', User::findById($pendingId)['employee_id'] === "ADM-$stamp");
+    check('pending() lists the registration', in_array($pendingId, array_column(User::pending(), 'id')));
+    check('countPending() counts at least our 2 registrations', User::countPending() >= 2);
+    check('Pending users are NOT in the normal user list', !in_array($pendingId, array_column(User::all(''), 'id')));
+    check('Pending users are NOT counted in countByRole()', array_sum(User::countByRole()) === (int) $db->query('SELECT COUNT(*) FROM users WHERE is_approved = 1')->fetchColumn());
+    check('employeeIdTaken() spots a used Employee ID', User::employeeIdTaken("ADM-$stamp") === true);
+    check('employeeIdTaken() ignores the user themselves', User::employeeIdTaken("ADM-$stamp", $pendingId) === false);
+    check('An unused Employee ID is free', User::employeeIdTaken("NOPE-$stamp") === false);
+    try {
+        User::create('Dup', "admintest_dup_$stamp@example.com", 'Password123!', 'applicant', "ADM-$stamp", 0);
+        check('The database refuses a duplicate Employee ID', false);
+    } catch (Exception $dup) {
+        check('The database refuses a duplicate Employee ID', true);
+    }
+    User::approve($pendingId);
+    check('approve() lets the user in (is_approved = 1)', User::findById($pendingId)['is_approved'] == 1);
+    check('An approved user appears in the normal list', in_array($pendingId, array_column(User::all(''), 'id')));
+    User::rejectPending($pendingId);
+    check('rejectPending() never deletes an APPROVED user', User::findById($pendingId) !== null);
+    User::rejectPending($pendingId2);
+    check('rejectPending() deletes a pending registration', User::findById($pendingId2) === null);
+    User::delete($pendingId);
+
     // --- report ---
     Application::changeStatus($applicationId, 'Screening', $hrId, 'Interview on 20 Nov at 10am, online (Teams link).');
     $rows = Report::stageReport(['vacancy_id' => $vacancyId]);

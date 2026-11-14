@@ -9,6 +9,9 @@
 <div class="login-wrap">
   <div class="login-card">
     <div class="login-title">Internal Job Application<br>Tracking System</div>
+    <?php if (!empty($success)): ?>
+      <div class="alert alert-success"><?= htmlspecialchars($success) ?></div>
+    <?php endif; ?>
     <?php if (!empty($errors)): ?>
       <div class="alert alert-error">
         <?php foreach ($errors as $e): ?><div><?= htmlspecialchars($e) ?></div><?php endforeach; ?>
@@ -26,7 +29,7 @@
       </div>
       <button type="submit" class="btn">Log In</button>
     </form>
-    <div class="btn-link">No account? Ask HR or your administrator to create one for you.</div>
+    <div class="btn-link">New employee? <a href="index.php?route=signup"><b>Register here</b></a></div>
   </div>
 </div>
 </body>

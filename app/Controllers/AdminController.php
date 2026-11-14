@@ -27,12 +27,18 @@ class AdminController
         Auth::requireRole('admin');
 
         $role = $_GET['role'] ?? '';
-        if (!in_array($role, ['admin', 'hr', 'applicant'])) {
+        if (!in_array($role, ['admin', 'hr', 'applicant', 'pending'])) {
             $role = '';
         }
 
-        $users = User::all($role);
+        // "pending" = people who registered themselves and are waiting for approval.
+        if ($role === 'pending') {
+            $users = User::pending();
+        } else {
+            $users = User::all($role);
+        }
         $counts = User::countByRole();
+        $pendingCount = User::countPending();
 
         $errors = $_SESSION['errors'] ?? [];
         $success = $_SESSION['success'] ?? '';
@@ -61,16 +67,17 @@ class AdminController
         $email = trim($_POST['email'] ?? '');
         $password = $_POST['password'] ?? '';
         $role = $_POST['role'] ?? '';
+        $employeeId = trim($_POST['employee_id'] ?? '');
 
-        $errors = $this->validateUser($name, $email, $password, $role, null, true);
+        $errors = $this->validateUser($name, $email, $password, $role, null, true, $employeeId);
         if (!empty($errors)) {
             $_SESSION['errors'] = $errors;
-            $_SESSION['old'] = ['name' => $name, 'email' => $email, 'role' => $role];
+            $_SESSION['old'] = ['name' => $name, 'email' => $email, 'role' => $role, 'employee_id' => $employeeId];
             header('Location: index.php?route=admin.users.create');
             exit;
         }
 
-        User::create($name, $email, $password, $role);
+        User::create($name, $email, $password, $role, $employeeId);
         $_SESSION['success'] = 'User "' . $name . '" was created.';
         header('Location: index.php?route=admin.users');
         exit;
@@ -110,20 +117,21 @@ class AdminController
         $email = trim($_POST['email'] ?? '');
         $password = $_POST['password'] ?? '';   // empty = keep the current password
         $role = $_POST['role'] ?? '';
+        $employeeId = trim($_POST['employee_id'] ?? '');
 
         // The admin cannot change their own role (they could lock themselves out).
         if ($id == Auth::id()) {
             $role = $user['role'];
         }
 
-        $errors = $this->validateUser($name, $email, $password, $role, $id, false);
+        $errors = $this->validateUser($name, $email, $password, $role, $id, false, $employeeId);
         if (!empty($errors)) {
             $_SESSION['errors'] = $errors;
             header('Location: index.php?route=admin.users.edit&id=' . $id);
             exit;
         }
 
-        User::update($id, $name, $email, $role, $password);
+        User::update($id, $name, $email, $role, $password, $employeeId);
         $_SESSION['success'] = 'User "' . $name . '" was updated.';
         header('Location: index.php?route=admin.users');
         exit;
@@ -150,6 +158,44 @@ class AdminController
         }
 
         header('Location: index.php?route=admin.users');
+        exit;
+    }
+
+    // Approve a registration: the person can log in from now on.
+    public function approve()
+    {
+        Auth::requireRole('admin');
+
+        $id = (int) ($_POST['id'] ?? 0);
+        $user = User::findById($id);
+
+        if ($user === null || $user['is_approved'] == 1) {
+            $_SESSION['errors'] = ['That registration was not found (it may already be approved).'];
+        } else {
+            User::approve($id);
+            $_SESSION['success'] = '"' . $user['name'] . '" was approved and can now log in.';
+        }
+
+        header('Location: index.php?route=admin.users&role=pending');
+        exit;
+    }
+
+    // Reject a registration: the pending account is deleted.
+    public function reject()
+    {
+        Auth::requireRole('admin');
+
+        $id = (int) ($_POST['id'] ?? 0);
+        $user = User::findById($id);
+
+        if ($user === null || $user['is_approved'] == 1) {
+            $_SESSION['errors'] = ['That registration was not found (it may already be approved).'];
+        } else {
+            User::rejectPending($id);
+            $_SESSION['success'] = 'The registration of "' . $user['name'] . '" was rejected and removed.';
+        }
+
+        header('Location: index.php?route=admin.users&role=pending');
         exit;
     }
 
@@ -267,7 +313,7 @@ class AdminController
 
     // Returns a list of error messages (empty list = everything is fine).
     // $userId is the user being edited (null when creating a new one).
-    private function validateUser($name, $email, $password, $role, $userId, $passwordRequired)
+    private function validateUser($name, $email, $password, $role, $userId, $passwordRequired, $employeeId = '')
     {
         $errors = [];
 
@@ -293,6 +339,15 @@ class AdminController
             }
             if ($userId !== null && User::emailTakenByOther($email, $userId)) {
                 $errors[] = 'Another account already uses this email.';
+            }
+        }
+
+        // Employee ID is optional here (the Super Admin can leave it empty), but if given it must be valid and unique.
+        if ($employeeId !== '') {
+            if (!preg_match('/^[A-Za-z0-9_-]{2,30}$/', $employeeId)) {
+                $errors[] = 'Employee ID may only contain letters, numbers, - and _ (2 to 30 characters).';
+            } elseif (User::employeeIdTaken($employeeId, $userId === null ? 0 : $userId)) {
+                $errors[] = 'This Employee ID is already used by another account.';
             }
         }
 

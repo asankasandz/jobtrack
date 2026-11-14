@@ -2,10 +2,13 @@ CREATE TABLE users (
     id              INT AUTO_INCREMENT PRIMARY KEY,
     name            VARCHAR(100) NOT NULL,
     email           VARCHAR(150) NOT NULL UNIQUE,
+    employee_id     VARCHAR(30) NULL,
     password_hash   VARCHAR(255) NOT NULL,
     role            ENUM('applicant','hr','admin') NOT NULL,
     is_active       TINYINT(1) NOT NULL DEFAULT 1,
-    created_at      DATETIME NOT NULL DEFAULT CURRENT_TIMESTAMP
+    is_approved     TINYINT(1) NOT NULL DEFAULT 1,
+    created_at      DATETIME NOT NULL DEFAULT CURRENT_TIMESTAMP,
+    UNIQUE KEY uq_employee_id (employee_id)
 );
 
 CREATE TABLE vacancies (

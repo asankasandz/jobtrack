@@ -13,10 +13,11 @@ class Report
     public static function dashboardStats()
     {
         return [
-            'total_users'        => self::count('SELECT COUNT(*) FROM users'),
-            'hr_staff'           => self::count("SELECT COUNT(*) FROM users WHERE role = 'hr'"),
-            'applicants'         => self::count("SELECT COUNT(*) FROM users WHERE role = 'applicant'"),
-            'inactive_users'     => self::count('SELECT COUNT(*) FROM users WHERE is_active = 0'),
+            'total_users'        => self::count('SELECT COUNT(*) FROM users WHERE is_approved = 1'),
+            'hr_staff'           => self::count("SELECT COUNT(*) FROM users WHERE role = 'hr' AND is_approved = 1"),
+            'applicants'         => self::count("SELECT COUNT(*) FROM users WHERE role = 'applicant' AND is_approved = 1"),
+            'inactive_users'     => self::count('SELECT COUNT(*) FROM users WHERE is_active = 0 AND is_approved = 1'),
+            'pending_users'      => self::count('SELECT COUNT(*) FROM users WHERE is_approved = 0'),
             'total_vacancies'    => self::count('SELECT COUNT(*) FROM vacancies'),
             'open_vacancies'     => self::count("SELECT COUNT(*) FROM vacancies WHERE status = 'open'"),
             'total_applications' => self::count('SELECT COUNT(*) FROM applications'),

@@ -24,6 +24,12 @@ foreach ($byStatus['labels'] as $stage) {
       <p class="page-sub">Overview of users, vacancies and applications.</p>
     </div>
 
+    <?php if ($stats['pending_users'] > 0): ?>
+      <a class="pending-banner" href="index.php?route=admin.users&role=pending">
+        <b><?= (int) $stats['pending_users'] ?> registration<?= $stats['pending_users'] == 1 ? '' : 's' ?></b> waiting for your approval &rarr;
+      </a>
+    <?php endif; ?>
+
     <!-- Summary cards -->
     <div class="cards4">
       <div class="stat-card big">

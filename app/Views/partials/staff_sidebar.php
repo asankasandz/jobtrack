@@ -2,6 +2,7 @@
 // Sidebar shared by every HR and Super Admin page.
 // The page that includes this file sets $activePage first, e.g. 'vacancies.manage'.
 $isAdmin = Auth::isAdmin();
+$pendingBadge = $isAdmin ? User::countPending() : 0;   // registrations waiting for approval
 
 // Small line icons (inline SVG, so no image files or icon library are needed).
 $svgStart = '<svg class="ico" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">';
@@ -30,7 +31,7 @@ $icons = [
     <a class="hr-nav-item <?= $activePage === 'hr.dashboard' ? 'active' : '' ?>" href="index.php?route=hr.dashboard"><?= $svgStart . $icons['file'] ?></svg>Applications</a>
 
     <div class="side-label">Administration</div>
-    <a class="hr-nav-item <?= $activePage === 'admin.users' ? 'active' : '' ?>" href="index.php?route=admin.users"><?= $svgStart . $icons['users'] ?></svg>Users</a>
+    <a class="hr-nav-item <?= $activePage === 'admin.users' ? 'active' : '' ?>" href="index.php?route=admin.users"><?= $svgStart . $icons['users'] ?></svg>Users<?php if ($pendingBadge > 0): ?><span class="nav-badge"><?= $pendingBadge ?></span><?php endif; ?></a>
     <a class="hr-nav-item <?= $activePage === 'admin.reports' ? 'active' : '' ?>" href="index.php?route=admin.reports"><?= $svgStart . $icons['chart'] ?></svg>Reports</a>
   <?php endif; ?>
 </div>
