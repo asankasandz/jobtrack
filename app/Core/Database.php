@@ -1,40 +1,35 @@
 <?php
 
-namespace App\Core;
-
-use PDO;
-use PDOException;
-
+// Creates ONE database connection (PDO) and reuses it for the whole request.
+// All queries in the Models use prepared statements to prevent SQL injection.
 class Database
 {
-    private static ?PDO $connection = null;
+    private static $connection = null;
 
-    public static function connection(): PDO
+    public static function connection()
     {
+        // Only connect the first time; after that, return the same connection.
         if (self::$connection === null) {
             $config = require __DIR__ . '/../../config/database.php';
 
-            $dsn = sprintf(
-                'mysql:host=%s;port=%s;dbname=%s;charset=%s',
-                $config['host'],
-                $config['port'],
-                $config['database'],
-                $config['charset']
-            );
+            $dsn = 'mysql:host=' . $config['host']
+                 . ';port=' . $config['port']
+                 . ';dbname=' . $config['database']
+                 . ';charset=' . $config['charset'];
 
             try {
-                self::$connection = new PDO($dsn, $config['username'], $config['password'], [
-                    PDO::ATTR_ERRMODE => PDO::ERRMODE_EXCEPTION,
-                    PDO::ATTR_DEFAULT_FETCH_MODE => PDO::FETCH_ASSOC,
-                    PDO::ATTR_EMULATE_PREPARES => false,
-                ]);
+                self::$connection = new PDO($dsn, $config['username'], $config['password']);
+
+                // Throw an error if a query fails, instead of failing silently.
+                self::$connection->setAttribute(PDO::ATTR_ERRMODE, PDO::ERRMODE_EXCEPTION);
+                // Return rows as ['column' => value] arrays.
+                self::$connection->setAttribute(PDO::ATTR_DEFAULT_FETCH_MODE, PDO::FETCH_ASSOC);
+                // Use real prepared statements in MySQL (better SQL-injection protection).
+                self::$connection->setAttribute(PDO::ATTR_EMULATE_PREPARES, false);
             } catch (PDOException $e) {
-                // Log the real reason for the developer; never show host/user
-                // details to visitors.
+                // Write the real error to the server log, but never show
+                // database details to the visitor.
                 error_log('Database connection failed: ' . $e->getMessage());
-                if (PHP_SAPI === 'cli') {
-                    throw $e;
-                }
                 http_response_code(500);
                 die('The service is temporarily unavailable. Please try again later.');
             }

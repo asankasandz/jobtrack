@@ -1,12 +1,10 @@
 <?php
 
-namespace App\Models;
-
-use App\Core\Database;
-
+// Model for the "vacancies" table.
 class Vacancy
 {
-    public static function allOpen(): array
+    // Open vacancies only - shown on the public landing page.
+    public static function allOpen()
     {
         $stmt = Database::connection()->query(
             "SELECT * FROM vacancies WHERE status = 'open' ORDER BY created_at DESC"
@@ -14,21 +12,26 @@ class Vacancy
         return $stmt->fetchAll();
     }
 
-    public static function allForHr(): array
+    // Every vacancy (open and closed) - for the HR "Manage Vacancies" page.
+    public static function allForHr()
     {
         $stmt = Database::connection()->query('SELECT * FROM vacancies ORDER BY created_at DESC');
         return $stmt->fetchAll();
     }
 
-    public static function find(int $id): ?array
+    public static function find($id)
     {
         $stmt = Database::connection()->prepare('SELECT * FROM vacancies WHERE id = :id LIMIT 1');
         $stmt->execute(['id' => $id]);
         $vacancy = $stmt->fetch();
-        return $vacancy ?: null;
+
+        if ($vacancy === false) {
+            return null;
+        }
+        return $vacancy;
     }
 
-    public static function create(array $data, int $createdBy): int
+    public static function create($data, $createdBy)
     {
         $stmt = Database::connection()->prepare(
             'INSERT INTO vacancies (title, department, description, requirements, image_path, status, created_by)
@@ -44,19 +47,17 @@ class Vacancy
             'created_by' => $createdBy,
         ]);
 
-        return (int) Database::connection()->lastInsertId();
+        return Database::connection()->lastInsertId();
     }
 
-    public static function update(int $id, array $data): void
+    public static function update($id, $data)
     {
-        // image_path is only overwritten when a new image was actually uploaded
-        // (handled by the controller); otherwise the existing value is kept.
-        $stmt = Database::connection()->prepare(
+        $db = Database::connection();
+
+        $stmt = $db->prepare(
             'UPDATE vacancies
              SET title = :title, department = :department, description = :description,
-                 requirements = :requirements, status = :status,
-                 image_path = COALESCE(:image_path, image_path),
-                 closed_at = CASE WHEN :status2 = "closed" AND closed_at IS NULL THEN NOW() ELSE closed_at END
+                 requirements = :requirements, status = :status
              WHERE id = :id'
         );
         $stmt->execute([
@@ -65,22 +66,33 @@ class Vacancy
             'description' => $data['description'],
             'requirements' => $data['requirements'],
             'status' => $data['status'],
-            'image_path' => $data['image_path'] ?? null,
-            'status2' => $data['status'],
             'id' => $id,
         ]);
+
+        // Only replace the image if HR uploaded a new one; otherwise keep the old image.
+        if (!empty($data['image_path'])) {
+            $stmt = $db->prepare('UPDATE vacancies SET image_path = :image_path WHERE id = :id');
+            $stmt->execute(['image_path' => $data['image_path'], 'id' => $id]);
+        }
+
+        // Remember when the vacancy was first closed.
+        if ($data['status'] === 'closed') {
+            $stmt = $db->prepare('UPDATE vacancies SET closed_at = NOW() WHERE id = :id AND closed_at IS NULL');
+            $stmt->execute(['id' => $id]);
+        }
     }
 
-    public static function delete(int $id): void
+    public static function delete($id)
     {
         $stmt = Database::connection()->prepare('DELETE FROM vacancies WHERE id = :id');
         $stmt->execute(['id' => $id]);
     }
 
-    public static function hasApplications(int $id): bool
+    // A vacancy that already has applications must not be deleted (it can be closed instead).
+    public static function hasApplications($id)
     {
-        $stmt = Database::connection()->prepare('SELECT 1 FROM applications WHERE vacancy_id = :id LIMIT 1');
+        $stmt = Database::connection()->prepare('SELECT COUNT(*) FROM applications WHERE vacancy_id = :id');
         $stmt->execute(['id' => $id]);
-        return (bool) $stmt->fetchColumn();
+        return $stmt->fetchColumn() > 0;
     }
 }

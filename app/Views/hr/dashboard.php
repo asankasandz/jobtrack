@@ -1,23 +1,16 @@
-<?php use App\Models\Application; ?>
 <!DOCTYPE html>
 <html lang="en">
 <head>
 <meta charset="UTF-8">
-<title>HR Dashboard</title>
+<title><?= Auth::isAdmin() ? 'Applications' : 'HR Dashboard' ?></title>
 <link rel="stylesheet" href="assets/style.css">
 </head>
 <body>
 <div class="hr-wrap">
-  <div class="hr-sidebar">
-    <a class="hr-nav-item active" href="index.php?route=hr.dashboard">Dashboard</a>
-    <a class="hr-nav-item" href="index.php?route=vacancies.manage">Vacancies</a>
-    <a class="hr-nav-item active" href="index.php?route=hr.dashboard">Applications</a>
-  </div>
+  <?php $activePage = 'hr.dashboard'; require __DIR__ . '/../partials/staff_sidebar.php'; ?>
   <div class="hr-main">
-    <div style="text-align:right; font-size:12px; color:#8894a8; margin-bottom:10px;">
-      <?= htmlspecialchars($_SESSION['user_name']) ?> (HR) &nbsp;|&nbsp; <a href="index.php?route=logout">Log out</a>
-    </div>
-    <div class="h1">HR Dashboard &amp; Pipeline</div>
+    <?php require __DIR__ . '/../partials/staff_userbar.php'; ?>
+    <div class="h1"><?= Auth::isAdmin() ? 'Applications Pipeline' : 'HR Dashboard &amp; Pipeline' ?></div>
 
     <?php if (!empty($errors)): ?>
       <div class="alert alert-error"><?php foreach ($errors as $e): ?><div><?= htmlspecialchars($e) ?></div><?php endforeach; ?></div>
@@ -40,18 +33,19 @@
         <div class="hr-row">
           <div><?= htmlspecialchars($app['applicant_name']) ?></div>
           <div><?= htmlspecialchars($app['vacancy_title']) ?></div>
-          <div><span class="badge b-<?= strtolower($app['status']) ?>"><?= htmlspecialchars($app['status']) ?></span></div>
+          <div><span class="badge b-<?= strtolower($app['status']) ?>"><?= htmlspecialchars(Report::label($app['status'])) ?></span></div>
           <div><a href="index.php?route=applications.resume&id=<?= (int) $app['id'] ?>">Download</a></div>
           <div class="hr-actions" style="flex:1.6;">
             <?php if (!empty($next)): ?>
               <form method="post" action="index.php?route=applications.advance" style="display:flex;gap:4px;align-items:center;">
+                <?= Auth::csrfField() ?>
                 <input type="hidden" name="id" value="<?= (int) $app['id'] ?>">
                 <select name="new_status" style="height:28px;font-size:11px;">
                   <?php foreach ($next as $n): ?>
-                    <option value="<?= htmlspecialchars($n) ?>"><?= htmlspecialchars($n) ?></option>
+                    <option value="<?= htmlspecialchars($n) ?>"><?= htmlspecialchars(Report::label($n)) ?></option>
                   <?php endforeach; ?>
                 </select>
-                <input type="text" name="note" placeholder="Note (optional)" style="height:28px;font-size:11px;width:110px;">
+                <textarea name="note" class="note-box" rows="3" placeholder="Note for the applicant (e.g. interview date, time, online link or venue)"></textarea>
                 <button type="submit" class="act-btn act-advance">Go</button>
               </form>
             <?php else: ?>
@@ -59,6 +53,19 @@
             <?php endif; ?>
           </div>
         </div>
+        <details class="hr-history">
+          <summary>History &amp; notes (<?= count($app['history']) ?>)</summary>
+          <ul>
+            <?php foreach ($app['history'] as $h): ?>
+              <li><?= htmlspecialchars(Report::stageText($h['from_status'], $h['to_status'])) ?>
+                by <?= htmlspecialchars($h['changed_by_name']) ?> (<?= htmlspecialchars($h['changed_at']) ?>)
+                <?php if (!empty($h['note'])): ?>
+                  <div class="hist-note">Note: <?= nl2br(htmlspecialchars($h['note'])) ?></div>
+                <?php endif; ?>
+              </li>
+            <?php endforeach; ?>
+          </ul>
+        </details>
       <?php endforeach; ?>
     </div>
   </div>

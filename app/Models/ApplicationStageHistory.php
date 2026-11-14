@@ -1,12 +1,10 @@
 <?php
 
-namespace App\Models;
-
-use App\Core\Database;
-
+// Model for the "application_stage_history" table.
+// Every status change is saved here, so there is a full audit trail.
 class ApplicationStageHistory
 {
-    public static function record(int $applicationId, ?string $from, string $to, int $changedBy, ?string $note): void
+    public static function record($applicationId, $from, $to, $changedBy, $note)
     {
         $stmt = Database::connection()->prepare(
             'INSERT INTO application_stage_history (application_id, from_status, to_status, changed_by, note)
@@ -21,7 +19,7 @@ class ApplicationStageHistory
         ]);
     }
 
-    public static function forApplication(int $applicationId): array
+    public static function forApplication($applicationId)
     {
         $stmt = Database::connection()->prepare(
             'SELECT h.*, u.name AS changed_by_name

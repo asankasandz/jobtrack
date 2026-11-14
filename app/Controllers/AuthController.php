@@ -1,35 +1,44 @@
 <?php
 
-namespace App\Controllers;
-
-use App\Core\Auth;
-use App\Models\User;
-
+// Login, registration and logout.
+// This is an INTERNAL system, so registering does not give access: a new account is
+// "pending" (is_approved = 0) and cannot log in until the Super Admin approves it.
 class AuthController
 {
-    public function showLogin(): void
+    public function showLogin()
     {
+        // Already logged in? Go straight to the dashboard.
         if (Auth::check()) {
-            header('Location: index.php?route=' . (Auth::isHr() ? 'hr.dashboard' : 'applicant.dashboard'));
+            header('Location: index.php?route=' . $this->dashboardFor(Auth::role()));
             exit;
         }
         $errors = $_SESSION['errors'] ?? [];
-        unset($_SESSION['errors']);
+        $success = $_SESSION['success'] ?? '';
+        unset($_SESSION['errors'], $_SESSION['success']);
         require __DIR__ . '/../Views/auth/login.php';
     }
 
-    public function login(): void
+    public function login()
     {
-        $email = trim($_POST['email'] ?? '');
+        $employeeId = trim($_POST['employee_id'] ?? '');
         $password = $_POST['password'] ?? '';
         $errors = [];
+        $user = null;
 
-        if ($email === '' || $password === '') {
-            $errors[] = 'Please enter both email and password.';
+        if ($employeeId === '' || $password === '') {
+            $errors[] = 'Please enter both your Employee ID and password.';
         } else {
-            $user = User::findByEmail($email);
+            $user = User::findByEmployeeId($employeeId);
+            // Same message for "no such Employee ID" and "wrong password",
+            // so attackers can't find out which IDs exist.
             if ($user === null || !password_verify($password, $user['password_hash'])) {
-                $errors[] = 'Incorrect email or password.';
+                $errors[] = 'Incorrect Employee ID or password.';
+            } elseif ($user['is_approved'] != 1) {
+                // Registered, but the Super Admin has not approved the account yet.
+                $errors[] = 'Your registration is waiting for approval by the Super Admin. You can log in once it has been approved.';
+            } elseif ($user['is_active'] != 1) {
+                // Deactivated by the Super Admin (password was correct, account is switched off).
+                $errors[] = 'This account has been deactivated. Please contact the administrator.';
             }
         }
 
@@ -40,27 +49,14 @@ class AuthController
         }
 
         Auth::login($user);
-        header('Location: ' . $this->redirectTarget($user['role']));
+        header('Location: ' . $this->pageAfterLogin($user['role']));
         exit;
     }
 
-    // Supports "Apply" links for guests: they're sent to login/signup with
-    // ?next=... and, once authenticated, land back on the page they wanted.
-    // Only an internal index.php?route=... path is ever honoured, never an
-    // external URL, so this can't be used as an open redirect.
-    private function redirectTarget(string $role): string
-    {
-        $next = $_GET['next'] ?? '';
-        if ($role === 'applicant' && $next !== '' && preg_match('/^[a-zA-Z0-9_.=&-]+$/', $next)) {
-            return 'index.php?route=' . $next;
-        }
-        return 'index.php?route=' . ($role === 'hr' ? 'hr.dashboard' : 'applicant.dashboard');
-    }
-
-    public function showSignup(): void
+    public function showSignup()
     {
         if (Auth::check()) {
-            header('Location: index.php?route=' . (Auth::isHr() ? 'hr.dashboard' : 'applicant.dashboard'));
+            header('Location: index.php?route=' . $this->dashboardFor(Auth::role()));
             exit;
         }
         $errors = $_SESSION['errors'] ?? [];
@@ -69,7 +65,10 @@ class AuthController
         require __DIR__ . '/../Views/auth/signup.php';
     }
 
-    public function signup(): void
+    // Register as an employee. There is no Employee ID yet: the Super Admin assigns it when
+    // approving. The account is created as PENDING, so nobody is logged in and nothing can
+    // be seen until then.
+    public function signup()
     {
         $name = trim($_POST['name'] ?? '');
         $email = trim($_POST['email'] ?? '');
@@ -100,21 +99,46 @@ class AuthController
             exit;
         }
 
-        // Public sign-up always creates an Applicant account.
-        // HR accounts are seeded directly in the database (see database/seed.php),
-        // not created through this form, so a user can never self-assign the HR role.
-        $userId = User::createApplicant($name, $email, $password);
-        $user = User::findById($userId);
-        Auth::login($user);
+        // Always an employee (role 'applicant'), always pending (is_approved = 0), and no
+        // Employee ID: nobody can register themselves as HR/admin, skip the approval, or
+        // pick their own ID.
+        User::create($name, $email, $password, 'applicant', null, 0);
 
-        header('Location: ' . $this->redirectTarget($user['role']));
+        $_SESSION['success'] = 'Thank you, ' . $name . '. Your registration was received. The Super Admin will approve your account and give you an Employee ID - use that ID and your password to log in.';
+        header('Location: index.php?route=login');
         exit;
     }
 
-    public function logout(): void
+    public function logout()
     {
         Auth::logout();
         header('Location: index.php?route=login');
         exit;
+    }
+
+    // ---------- Helper functions ----------
+
+    private function dashboardFor($role)
+    {
+        if ($role === 'admin') {
+            return 'admin.dashboard';
+        }
+        if ($role === 'hr') {
+            return 'hr.dashboard';
+        }
+        return 'applicant.dashboard';
+    }
+
+    // Where to go after login. If a guest clicked "Log in to apply", the
+    // link has ?next=... so they come back to that vacancy after logging in.
+    // The check only allows letters, numbers and . _ = & - characters, so
+    // "next" can never send the user to another website.
+    private function pageAfterLogin($role)
+    {
+        $next = $_GET['next'] ?? '';
+        if ($role === 'applicant' && $next !== '' && preg_match('/^[a-zA-Z0-9_.=&-]+$/', $next)) {
+            return 'index.php?route=' . $next;
+        }
+        return 'index.php?route=' . $this->dashboardFor($role);
     }
 }

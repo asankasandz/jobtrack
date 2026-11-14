@@ -9,7 +9,7 @@
 <div class="topbar">
   <div class="brand">JobTrack</div>
   <div class="user">
-    <div class="avatar"></div><?= htmlspecialchars($_SESSION['user_name']) ?> (Applicant)
+    <div class="avatar"></div><?= htmlspecialchars($_SESSION['user_name']) ?> (Employee)
     &nbsp;|&nbsp;<a href="index.php?route=applicant.dashboard">Dashboard</a>
     &nbsp;|&nbsp;<a href="index.php?route=home">Open Vacancies</a>
     &nbsp;|&nbsp;<a href="index.php?route=logout">Log out</a>
@@ -22,6 +22,7 @@
   <?php else: ?>
     <div class="card">
       <form method="post" action="index.php?route=applications.store" enctype="multipart/form-data">
+        <?= Auth::csrfField() ?>
         <input type="hidden" name="vacancy_id" value="<?= (int) $vacancy['id'] ?>">
         <label class="form-label">Cover Letter</label>
         <textarea name="cover_letter" placeholder="Briefly explain why you're a good fit..."></textarea>

@@ -4,20 +4,14 @@
 // so this script does NOT wrap everything in one outer transaction (PDO/MySQL does
 // not support nested transactions). Instead, test rows are explicitly deleted at the end.
 
-spl_autoload_register(function (string $class): void {
-    $prefix = 'App\\';
-    if (strncmp($class, $prefix, strlen($prefix)) !== 0) return;
-    $relative = substr($class, strlen($prefix));
-    $path = __DIR__ . '/../app/' . str_replace('\\', '/', $relative) . '.php';
-    if (is_file($path)) require $path;
-});
+require_once __DIR__ . '/../app/Core/Database.php';
+require_once __DIR__ . '/../app/Models/User.php';
+require_once __DIR__ . '/../app/Models/Vacancy.php';
+require_once __DIR__ . '/../app/Models/Application.php';
+require_once __DIR__ . '/../app/Models/ApplicationStageHistory.php';
 
-use App\Core\Database;
-use App\Models\User;
-use App\Models\Vacancy;
-use App\Models\Application;
 
-function check(string $label, bool $cond): void {
+function check($label, $cond) {
     echo ($cond ? '[PASS] ' : '[FAIL] ') . $label . "\n";
 }
 
@@ -30,8 +24,8 @@ try {
     $hr = $db->query("SELECT * FROM users WHERE role = 'hr' LIMIT 1")->fetch();
     check('An HR account exists', $hr !== false && $hr['role'] === 'hr');
 
-    $applicantId = User::createApplicant('Smoke Test Applicant', 'smoketest_' . time() . '@example.com', 'Password123!');
-    check('Applicant created via createApplicant()', $applicantId > 0);
+    $applicantId = User::create('Smoke Test Applicant', 'smoketest_' . time() . '@example.com', 'Password123!', 'applicant');
+    check('Applicant (employee) account created via User::create()', $applicantId > 0);
     $applicant = User::findById($applicantId);
     check('Applicant role is "applicant"', $applicant['role'] === 'applicant');
 
@@ -75,7 +69,7 @@ try {
 
     $stats = Application::summaryStats();
     check('summaryStats() runs without error', is_array($stats) && isset($stats['total_applications']));
-} catch (\Throwable $e) {
+} catch (Exception $e) {
     echo "[ERROR] " . $e->getMessage() . "\n";
 } finally {
     if ($applicationId) {

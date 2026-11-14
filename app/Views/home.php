@@ -1,13 +1,6 @@
 <?php
 $openCount  = count($vacancies);
 $isLoggedIn = !empty($_SESSION['user_id']);
-$e = static fn($value): string => htmlspecialchars((string) $value, ENT_QUOTES, 'UTF-8');
-
-// Short plain-text excerpt for vacancy cards.
-$excerpt = static function (?string $text, int $limit = 120): string {
-    $text = trim(preg_replace('/\s+/', ' ', strip_tags((string) $text)));
-    return mb_strlen($text) > $limit ? rtrim(mb_substr($text, 0, $limit)) . '…' : $text;
-};
 ?>
 <!DOCTYPE html>
 <html lang="en">
@@ -36,13 +29,10 @@ $excerpt = static function (?string $text, int $limit = 120): string {
 
     <div class="nav-actions">
       <?php if ($isLoggedIn): ?>
-        <span class="nav-greeting">Hi, <?= $e($_SESSION['user_name'] ?? '') ?></span>
+        <span class="nav-greeting">Hi, <?= htmlspecialchars($_SESSION['user_name'] ?? '') ?></span>
         <a class="btn btn-sm" href="index.php?route=applicant.dashboard">Dashboard</a>
         <a class="btn btn-sm" href="index.php?route=applications.mine">My Applications</a>
         <a class="btn btn-sm btn-solid" href="index.php?route=logout">Log out</a>
-      <?php else: ?>
-        <a class="btn btn-sm" href="index.php?route=login">Log in</a>
-        <a class="btn btn-sm btn-solid" href="index.php?route=signup">Sign up</a>
       <?php endif; ?>
     </div>
   </div>
@@ -62,16 +52,14 @@ $excerpt = static function (?string $text, int $limit = 120): string {
       </p>
 
       <div class="hero-actions">
-        <a class="btn btn-lg btn-solid" href="#vacancies">View open vacancies &rarr;</a>
         <?php if ($isLoggedIn): ?>
+          <a class="btn btn-lg btn-solid" href="#vacancies">View open vacancies &rarr;</a>
           <a class="btn btn-lg" href="index.php?route=applications.mine">Track my applications</a>
-        <?php else: ?>
-          <a class="btn btn-lg" href="index.php?route=signup">Create an account</a>
         <?php endif; ?>
       </div>
 
       <ul class="hero-points">
-        <li>Free to browse</li>
+        <li>For employees only</li>
         <li>One-click CV upload</li>
         <li>Live status history</li>
       </ul>
@@ -129,7 +117,7 @@ $excerpt = static function (?string $text, int $limit = 120): string {
     <div class="section-head">
       <span class="section-kicker">Opportunities</span>
       <h2 class="section-title">Open vacancies</h2>
-      <p class="section-sub">No account needed to browse &mdash; sign in when you're ready to apply.</p>
+      <p class="section-sub">Open positions in the organisation. Apply with your CV in a few clicks.</p>
     </div>
 
     <?php if (empty($vacancies)): ?>
@@ -143,28 +131,29 @@ $excerpt = static function (?string $text, int $limit = 120): string {
         <?php foreach ($vacancies as $v):
             $id        = (int) $v['id'];
             $applyUrl  = 'index.php?route=applications.apply&vacancy_id=' . $id;
-            $loginNext = 'index.php?route=login&next=' . urlencode('applications.apply&vacancy_id=' . $id);
             $posted    = !empty($v['created_at']) ? date('j M Y', strtotime($v['created_at'])) : '';
+
+            // Show only the first 120 characters of the description on the card.
+            $shortDescription = $v['description'];
+            if (strlen($shortDescription) > 120) {
+                $shortDescription = substr($shortDescription, 0, 120) . '...';
+            }
         ?>
           <article class="vac-card">
             <div class="vac-media">
               <?php if (!empty($v['image_path'])): ?>
-                <img src="assets/uploads/vacancies/<?= $e($v['image_path']) ?>" alt="" loading="lazy">
+                <img src="assets/uploads/vacancies/<?= htmlspecialchars($v['image_path']) ?>" alt="" loading="lazy">
               <?php else: ?>
-                <span class="initial"><?= $e(mb_strtoupper(mb_substr($v['title'], 0, 1))) ?></span>
+                <span class="initial"><?= htmlspecialchars(mb_strtoupper(mb_substr($v['title'], 0, 1))) ?></span>
               <?php endif; ?>
             </div>
             <div class="vac-body">
-              <span class="vac-dept"><?= $e($v['department']) ?></span>
-              <h3 class="vac-title"><?= $e($v['title']) ?></h3>
-              <p class="vac-desc"><?= $e($excerpt($v['description'] ?? '')) ?></p>
+              <span class="vac-dept"><?= htmlspecialchars($v['department']) ?></span>
+              <h3 class="vac-title"><?= htmlspecialchars($v['title']) ?></h3>
+              <p class="vac-desc"><?= htmlspecialchars($shortDescription) ?></p>
               <div class="vac-foot">
-                <span class="vac-date"><?= $posted ? 'Posted ' . $e($posted) : '' ?></span>
-                <?php if ($isLoggedIn): ?>
-                  <a class="btn btn-sm btn-solid" href="<?= $e($applyUrl) ?>">Apply now</a>
-                <?php else: ?>
-                  <a class="btn btn-sm btn-solid" href="<?= $e($loginNext) ?>">Log in to apply</a>
-                <?php endif; ?>
+                <span class="vac-date"><?= $posted ? 'Posted ' . htmlspecialchars($posted) : '' ?></span>
+                <a class="btn btn-sm btn-solid" href="<?= htmlspecialchars($applyUrl) ?>">Apply now</a>
               </div>
             </div>
           </article>
@@ -202,21 +191,6 @@ $excerpt = static function (?string $text, int $limit = 120): string {
     </div>
   </div>
 </section>
-
-<!-- ============ CTA ============ -->
-<?php if (!$isLoggedIn): ?>
-<section class="cta-band">
-  <div class="container">
-    <div class="cta-inner on-dark">
-      <div>
-        <h2>Ready to take the next step?</h2>
-        <p>Create your free account and apply to any open role today.</p>
-      </div>
-      <a class="btn btn-lg btn-solid" href="index.php?route=signup">Get started</a>
-    </div>
-  </div>
-</section>
-<?php endif; ?>
 
 </main>
 

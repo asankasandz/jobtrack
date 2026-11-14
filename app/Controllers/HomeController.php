@@ -1,19 +1,19 @@
 <?php
 
-namespace App\Controllers;
-
-use App\Core\Auth;
-use App\Models\Vacancy;
-
+// The index page (hero + open vacancies). Internal system: only for logged-in users.
 class HomeController
 {
-    // Public landing page. HR is sent straight to their dashboard since the
-    // public vacancy listing has nothing for them to do; Applicants and guests
-    // see the same page, just with a different nav (login/signup vs. account links).
-    public function index(): void
+    public function index()
     {
-        if (Auth::isHr()) {
-            header('Location: index.php?route=hr.dashboard');
+        // Guests go to the login page first.
+        if (!Auth::check()) {
+            header('Location: index.php?route=login');
+            exit;
+        }
+
+        // HR and the Super Admin have nothing to do on the public page - send them to their dashboard.
+        if (Auth::isStaff()) {
+            header('Location: index.php?route=' . (Auth::isAdmin() ? 'admin.dashboard' : 'hr.dashboard'));
             exit;
         }
 

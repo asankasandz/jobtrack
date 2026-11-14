@@ -6,10 +6,12 @@ Last updated: 2026-11-12.
 ## What this is
 
 MIT4301 Independent Study project. Plain PHP (no framework), hand-written MVC, MySQL via PDO,
-running on XAMPP. Two roles: **Applicant** (self-registers) and **HR Staff** (seeded, not public
-sign-up — see Security Decisions below).
+running on XAMPP. **Internal system.** Three roles: **Employee** (role value `applicant`; registers themselves, then applies for internal
+vacancies), **HR Staff** and **Super Admin** (both created by the Super Admin / seeded, never by registration).
+**Registering does not give access:** a new account is *pending* until the Super Admin approves it and assigns an Employee ID.
+**People log in with Employee ID + password** (e.g. `hr2024`, `super2024`, `emp2024`; not case-sensitive; no email login).
 
-Built initially for an **interim progress demo** requiring: (1) working login + sign-up, (2) all
+Built initially for an **interim progress demo** requiring: (1) working login + sign-up (sign-up creates a PENDING account that the Super Admin must approve), (2) all
 finalized UIs navigable, (3) two full CRUD features beyond auth. Chosen CRUD features: **Vacancy**
 (full CRUD) and **Application** (Create/Read/Update + controlled Withdraw).
 
@@ -21,27 +23,26 @@ finalized UIs navigable, (3) two full CRUD features beyond auth. Chosen CRUD fea
 - **HR login:** credentials are NOT stored in the repo. Check phpMyAdmin's `users` table (role=`hr`)
   for the email; if the password is lost, reset its `password_hash` there.
   `seed.php` now takes credentials as CLI arguments and does nothing if any HR account already exists.
-- Applicant accounts: create via the public Sign Up page (self-service, always role=`applicant`).
+- Employee accounts: either self-registered on `signup` (name, email, password -> pending, no Employee ID yet; the Super Admin types the ID when approving) or created directly by the Super Admin on `admin.users.create` (Employee ID required; approved at once).
 
 ## Folder structure
 
 ```
 interview-project/
   public/
-    index.php              <- front controller + router dispatch (all requests go through this)
+    index.php              <- front controller: require_once all classes + two switch statements (GET / POST) pick the controller method
     assets/style.css        <- internal app stylesheet (navy theme) — used by every view except home.php
     assets/landing.css      <- public landing page ONLY (sky-blue theme: --accent #0369a1 / --accent-bright #38bdf8 / --accent-soft #e0f2fe; responsive); loaded by home.php
     assets/uploads/vacancies/  <- PUBLIC vacancy images (created at runtime)
   app/
     Core/
       Database.php           PDO singleton (prepared statements only, EMULATE_PREPARES off)
-      Router.php              tiny GET/POST route table + dispatch
       Auth.php                 session helpers; requireRole() is the server-side authorization gate
     Models/
-      User.php, Vacancy.php, Application.php, ApplicationStageHistory.php
+      User.php, Vacancy.php, Application.php, ApplicationStageHistory.php, Report.php (read-only dashboard/report queries)
     Controllers/
       HomeController.php      public landing page
-      AuthController.php      login, signup (applicant-only), logout
+      AuthController.php      login, sign-up (creates a PENDING employee), logout
       VacancyController.php   HR full CRUD + image upload handling
       ApplicationController.php  apply, CV upload, status history, withdraw, HR advance/reject, resume download
     Views/
@@ -50,9 +51,11 @@ interview-project/
   database/
     schema.sql                 source-of-truth DDL (keep in sync with real migrations below)
     migrate_add_vacancy_image.php   one-off migration already applied to the live DB
-    seed.php                    creates the HR account: php seed.php <email> <password> ["Name"]
+    seed.php                    creates the first HR or Super Admin account: php seed.php <email> <password> ["Name"] [hr|admin] [EmployeeID] (default ID hr2024 / super2024)
+    migrate_add_admin_role.php  adds role 'admin' + users.is_active (idempotent; the deploy workflow runs every migrate_*.php)
+    smoke_test_admin.php        28-check test of user management + reports (model level)
     smoke_test.php               15-check end-to-end test of auth/vacancy/application logic (self-cleaning)
-    smoke_test_image.php          4-check test of vacancy image_path create/update/COALESCE behaviour
+    smoke_test_image.php          4-check test of vacancy image_path create/update/keep-old-image behaviour
   storage/
     resumes/                   PRIVATE CV storage, outside public/, .htaccess "Require all denied",
                                 only ever served through ApplicationController::downloadResume()
@@ -63,7 +66,7 @@ interview-project/
 | Route | Method | Who | Does |
 |---|---|---|---|
 | `home` | GET | anyone | landing page; HR auto-redirected to `hr.dashboard`. Applicants are NOT redirected away (they legitimately browse/apply here even while logged in) |
-| `login` / `signup` / `logout` | GET/POST | anyone | auth; both support `?next=` to return to an intended page after login. Default post-login landing: `hr.dashboard` for HR, `applicant.dashboard` for Applicant |
+| `login` / `signup` / `logout` | GET/POST | anyone | auth; login supports `?next=` to return to an intended page after login. A pending (unapproved) user cannot log in. Default post-login landing: `hr.dashboard` for HR, `applicant.dashboard` for Applicant |
 | `applicant.dashboard` | GET | Applicant | Applicant's own dashboard (counterpart to `hr.dashboard`) — stat cards (open vacancies, my applications, in progress, awaiting decision, offers) + recent applications preview + quick links to browse/My Applications |
 | `vacancies.manage` | GET | HR | list all vacancies |
 | `vacancies.create` / `.store` | GET/POST | HR | create (+ image upload) |
@@ -83,13 +86,16 @@ interview-project/
 
 Status values: `Applied → Screening → InterviewScheduled → InterviewCompleted → DecisionPending →
 {Offered | Rejected}`, with `Withdrawn` reachable from any non-final state. Valid transitions are
-enforced in code (`Application::VALID_TRANSITIONS`), not just assumed — `smoke_test.php` verifies
+enforced in code (`Application::nextStatuses()`), not just assumed — `smoke_test.php` verifies
 an invalid jump (Applied → Offered) is rejected.
 
 ## Security decisions worth remembering (will come up in Q&A)
 
-- **HR accounts are seeded, not self-registered** — stops anyone from self-granting HR access
-  through the public form. This is a deliberate choice, not a missing feature.
+- **Registration needs approval (internal system).** Anyone can register, but the account is created with `is_approved = 0`, the role
+  forced to employee and NO Employee ID, so outsiders cannot get in and nobody can make themselves HR/admin, skip the approval or choose
+  their own ID (extra form fields such as `role=admin` are ignored). The Super Admin approves (typing the Employee ID) or rejects on
+  `admin.users&role=pending`; rejecting deletes the account. Login uses Employee ID + password, with one generic error message.
+- **The index page (hero + vacancies) is only for logged-in users** — guests are redirected to the login page.
 - **CVs vs vacancy images are stored differently on purpose**: CVs are private (outside `public/`,
   `.htaccess`-denied, served only via an authorised controller method); vacancy images are public
   marketing content (stored inside `public/assets/uploads/...`, linked directly) — different
@@ -102,7 +108,6 @@ an invalid jump (Applied → Offered) is rejected.
 
 ## Known gaps / not yet done
 
-- No CSRF tokens on forms (acceptable for an interim demo; would be a real gap for a production app)
 - No rate-limiting on login attempts
 - Chapter 2 (UI Design rationale) documents a single consistent colour system "across every
   screen" — the landing page was added afterward with an intentionally different scheme (now
@@ -120,3 +125,40 @@ C:\xampp\php\php.exe database\smoke_test.php
 C:\xampp\php\php.exe database\smoke_test_image.php
 ```
 Both are self-cleaning (roll back/delete their own test rows) and safe to re-run anytime.
+
+## Coding style (deliberately basic PHP — decided 2026-11-13)
+
+Lecturers asked for a basic project, so the code avoids advanced language features while keeping
+MVC + security: no namespaces/`use`/autoloader (plain `require_once`), no Router class (switch in
+`index.php`), no type declarations, no class constants, no closures/arrow functions. Upload checks are
+plain `checkX()` (returns error message or '') + `saveX()` helpers; `mime_content_type()` checks the
+real file type; `uniqid()` names files. Keep new code in this same style.
+
+## Super Admin (added 2026-11-14)
+
+- Role `admin` = everything HR can do (HR pages use `Auth::requireStaff()`) PLUS user management and reports.
+- Create the first one: `php database/seed.php boss@example.com "StrongPass1" "Super Admin" admin` -> logs in as `super2024` (or add your own ID as the last argument, e.g. `super2030`). HR users and further admins are created on the Users page.
+- Pages (`AdminController`, views in `app/Views/admin/`, shared sidebar in `app/Views/partials/`):
+  `admin.dashboard` (stat cards + Chart.js line chart of the last 30 days + stage bar chart + latest activity),
+  `admin.users` / `.create` / `.edit` (add, edit, change role, reset password), `admin.users.toggle` (deactivate/activate),
+  `admin.users.delete`, `admin.reports` (stage-by-stage: applicant name+email, vacancy, stage, Passed/Failed/Withdrawn, HR note, decided by; filters; CSV download via `admin.reports.csv`).
+- **Deactivate vs delete:** a user with vacancies/applications/history cannot be deleted (foreign keys) — they are deactivated
+  (`users.is_active = 0`): cannot log in, and an already-open session is logged out on the next request (`Auth::requireLogin()` re-checks the DB).
+  The admin cannot delete/deactivate themselves or change their own role.
+- **CSRF:** every POST is checked centrally in `public/index.php` (`Auth::checkCsrf()`); every form includes `Auth::csrfField()`. New forms MUST include it.
+- **HR notes:** the note typed when advancing a stage (interview date/time/venue/link) is shown to the applicant (latest note on the card + full history) and to HR/admin (history section, reports).
+- CSV export prefixes cells starting with = + - @ with an apostrophe (spreadsheet formula injection).
+- Production: the deploy runs `database/migrate_*.php` automatically; the admin account itself is created once by hand on the server with seed.php.
+
+## Internal system decision (2026-11-14)
+
+The lecturer said a system named *internal* must not let outsiders in, while the marking criteria still require a sign-up feature.
+Solution: **register -> pending -> Super Admin approves.** `users.employee_id` (unique) and `users.is_approved` (default 1; 0 = pending)
+were added (`database/migrate_add_registration_approval.php`; the deploy workflow runs every `migrate_*.php`). Sign-up asks for name, email, password only
+(no Employee ID) and creates a pending employee; the Super Admin types the Employee ID when approving it (a suggestion like `emp2027` is pre-filled,
+from `User::nextEmployeeId()`), and people then log in with that ID + password. `migrate_assign_employee_ids.php` gave every existing
+account an ID (`hr2024`, `super2024`, `emp2024`...; it prints them, so check the GitHub deploy log for the live IDs); `AuthController::login()` refuses pending users with a clear message;
+`Auth::requireLogin()` also refuses them. The Users page has a **Pending approval** tab (Approve / Reject), the sidebar shows a badge
+and the admin dashboard a banner. The index page (`home`) redirects guests to login. UI wording: role `applicant` is shown as **Employee**.
+**The report (Chapter 1 use cases / diagrams) must show: Employee registers -> Super Admin approves -> Employee logs in.**
+Possible extras: let HR approve too; check the Employee ID against a staff list; CSV import of employees.
