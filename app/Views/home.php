@@ -34,8 +34,7 @@ $isLoggedIn = !empty($_SESSION['user_id']);
         <a class="btn btn-sm" href="index.php?route=applications.mine">My Applications</a>
         <a class="btn btn-sm btn-solid" href="index.php?route=logout">Log out</a>
       <?php else: ?>
-        <a class="btn btn-sm" href="index.php?route=login">Log in</a>
-        <a class="btn btn-sm btn-solid" href="index.php?route=signup">Sign up</a>
+        <a class="btn btn-sm btn-solid" href="index.php?route=login">Employee log in</a>
       <?php endif; ?>
     </div>
   </div>
@@ -55,16 +54,16 @@ $isLoggedIn = !empty($_SESSION['user_id']);
       </p>
 
       <div class="hero-actions">
-        <a class="btn btn-lg btn-solid" href="#vacancies">View open vacancies &rarr;</a>
         <?php if ($isLoggedIn): ?>
+          <a class="btn btn-lg btn-solid" href="#vacancies">View open vacancies &rarr;</a>
           <a class="btn btn-lg" href="index.php?route=applications.mine">Track my applications</a>
         <?php else: ?>
-          <a class="btn btn-lg" href="index.php?route=signup">Create an account</a>
+          <a class="btn btn-lg btn-solid" href="index.php?route=login">Employee log in &rarr;</a>
         <?php endif; ?>
       </div>
 
       <ul class="hero-points">
-        <li>Free to browse</li>
+        <li>For employees only</li>
         <li>One-click CV upload</li>
         <li>Live status history</li>
       </ul>
@@ -122,10 +121,17 @@ $isLoggedIn = !empty($_SESSION['user_id']);
     <div class="section-head">
       <span class="section-kicker">Opportunities</span>
       <h2 class="section-title">Open vacancies</h2>
-      <p class="section-sub">No account needed to browse &mdash; sign in when you're ready to apply.</p>
+      <p class="section-sub"><?= $isLoggedIn ? 'Open positions in the organisation. Apply with your CV in a few clicks.' : 'Open positions are shown to signed-in employees only.' ?></p>
     </div>
 
-    <?php if (empty($vacancies)): ?>
+    <?php if (!$isLoggedIn): ?>
+      <div class="empty-state">
+        <div class="icon">&#128274;</div>
+        <strong>Log in to see open vacancies</strong>
+        This is an internal portal. Use the account that HR or your administrator created for you.
+        <p style="margin-top:16px;"><a class="btn btn-solid" href="index.php?route=login">Employee log in</a></p>
+      </div>
+    <?php elseif (empty($vacancies)): ?>
       <div class="empty-state">
         <div class="icon">📭</div>
         <strong>No open vacancies right now</strong>
@@ -136,7 +142,6 @@ $isLoggedIn = !empty($_SESSION['user_id']);
         <?php foreach ($vacancies as $v):
             $id        = (int) $v['id'];
             $applyUrl  = 'index.php?route=applications.apply&vacancy_id=' . $id;
-            $loginNext = 'index.php?route=login&next=' . urlencode('applications.apply&vacancy_id=' . $id);
             $posted    = !empty($v['created_at']) ? date('j M Y', strtotime($v['created_at'])) : '';
 
             // Show only the first 120 characters of the description on the card.
@@ -159,11 +164,7 @@ $isLoggedIn = !empty($_SESSION['user_id']);
               <p class="vac-desc"><?= htmlspecialchars($shortDescription) ?></p>
               <div class="vac-foot">
                 <span class="vac-date"><?= $posted ? 'Posted ' . htmlspecialchars($posted) : '' ?></span>
-                <?php if ($isLoggedIn): ?>
-                  <a class="btn btn-sm btn-solid" href="<?= htmlspecialchars($applyUrl) ?>">Apply now</a>
-                <?php else: ?>
-                  <a class="btn btn-sm btn-solid" href="<?= htmlspecialchars($loginNext) ?>">Log in to apply</a>
-                <?php endif; ?>
+                <a class="btn btn-sm btn-solid" href="<?= htmlspecialchars($applyUrl) ?>">Apply now</a>
               </div>
             </div>
           </article>
@@ -208,10 +209,10 @@ $isLoggedIn = !empty($_SESSION['user_id']);
   <div class="container">
     <div class="cta-inner on-dark">
       <div>
-        <h2>Ready to take the next step?</h2>
-        <p>Create your free account and apply to any open role today.</p>
+        <h2>Already have an account?</h2>
+        <p>Log in with the account HR created for you to see open roles and apply.</p>
       </div>
-      <a class="btn btn-lg btn-solid" href="index.php?route=signup">Get started</a>
+      <a class="btn btn-lg btn-solid" href="index.php?route=login">Employee log in</a>
     </div>
   </div>
 </section>

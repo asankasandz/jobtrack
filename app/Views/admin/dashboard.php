@@ -32,7 +32,7 @@ foreach ($byStatus['labels'] as $stage) {
         </div>
         <div class="stat-num"><?= (int) $stats['total_users'] ?></div>
         <div class="stat-title">Users</div>
-        <div class="stat-sub"><?= (int) $stats['hr_staff'] ?> HR &middot; <?= (int) $stats['applicants'] ?> applicants &middot; <?= (int) $stats['inactive_users'] ?> inactive</div>
+        <div class="stat-sub"><?= (int) $stats['hr_staff'] ?> HR &middot; <?= (int) $stats['applicants'] ?> employees &middot; <?= (int) $stats['inactive_users'] ?> inactive</div>
       </div>
       <div class="stat-card big">
         <div class="stat-icon ic-purple">

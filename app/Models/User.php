@@ -28,7 +28,8 @@ class User
         return $user;
     }
 
-    // Create a user with any role ('applicant', 'hr' or 'admin').
+    // Create a user with any role ('applicant' = employee, 'hr' or 'admin').
+    // Only the Super Admin creates accounts - there is no public sign-up.
     public static function create($name, $email, $password, $role)
     {
         $stmt = Database::connection()->prepare(
@@ -43,13 +44,6 @@ class User
         ]);
 
         return Database::connection()->lastInsertId();
-    }
-
-    // Public sign-up always creates an "applicant", so nobody can make
-    // themselves HR or admin through the sign-up form.
-    public static function createApplicant($name, $email, $password)
-    {
-        return self::create($name, $email, $password, 'applicant');
     }
 
     public static function emailExists($email)

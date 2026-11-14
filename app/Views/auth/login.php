@@ -26,7 +26,7 @@
       </div>
       <button type="submit" class="btn">Log In</button>
     </form>
-    <div class="btn-link">New applicant? <a href="index.php?route=signup&next=<?= urlencode($_GET['next'] ?? '') ?>"><b>Create an account</b></a></div>
+    <div class="btn-link">No account? Ask HR or your administrator to create one for you.</div>
   </div>
 </div>
 </body>

@@ -15,7 +15,7 @@
     <div class="page-head page-head-row">
       <div>
         <div class="h1">Users</div>
-        <p class="page-sub">Add, edit, deactivate or delete accounts for HR staff, administrators and applicants.</p>
+        <p class="page-sub">Only you can create accounts: add, edit, deactivate or delete employees, HR staff and administrators.</p>
       </div>
       <a class="btn-primary" href="index.php?route=admin.users.create">+ Add User</a>
     </div>
@@ -33,7 +33,7 @@
           <a class="<?= $role === '' ? 'active' : '' ?>" href="index.php?route=admin.users">All <span><?= array_sum($counts) ?></span></a>
           <a class="<?= $role === 'admin' ? 'active' : '' ?>" href="index.php?route=admin.users&role=admin">Super Admins <span><?= $counts['admin'] ?></span></a>
           <a class="<?= $role === 'hr' ? 'active' : '' ?>" href="index.php?route=admin.users&role=hr">HR staff <span><?= $counts['hr'] ?></span></a>
-          <a class="<?= $role === 'applicant' ? 'active' : '' ?>" href="index.php?route=admin.users&role=applicant">Applicants <span><?= $counts['applicant'] ?></span></a>
+          <a class="<?= $role === 'applicant' ? 'active' : '' ?>" href="index.php?route=admin.users&role=applicant">Employees <span><?= $counts['applicant'] ?></span></a>
         </div>
         <input type="search" id="userSearch" class="search" placeholder="Search name or email...">
       </div>
@@ -55,7 +55,7 @@
                     </div>
                   </div>
                 </td>
-                <td><span class="role role-<?= htmlspecialchars($u['role']) ?>"><?= $u['role'] === 'admin' ? 'Super Admin' : ($u['role'] === 'hr' ? 'HR' : 'Applicant') ?></span></td>
+                <td><span class="role role-<?= htmlspecialchars($u['role']) ?>"><?= $u['role'] === 'admin' ? 'Super Admin' : ($u['role'] === 'hr' ? 'HR' : 'Employee') ?></span></td>
                 <td><span class="status <?= $u['is_active'] == 1 ? 'status-on' : 'status-off' ?>"><?= $u['is_active'] == 1 ? 'Active' : 'Inactive' ?></span></td>
                 <td class="nowrap"><?= date('j M Y', strtotime($u['created_at'])) ?></td>
                 <td>

@@ -24,8 +24,8 @@ try {
     $hr = $db->query("SELECT * FROM users WHERE role = 'hr' LIMIT 1")->fetch();
     check('An HR account exists', $hr !== false && $hr['role'] === 'hr');
 
-    $applicantId = User::createApplicant('Smoke Test Applicant', 'smoketest_' . time() . '@example.com', 'Password123!');
-    check('Applicant created via createApplicant()', $applicantId > 0);
+    $applicantId = User::create('Smoke Test Applicant', 'smoketest_' . time() . '@example.com', 'Password123!', 'applicant');
+    check('Applicant (employee) account created via User::create()', $applicantId > 0);
     $applicant = User::findById($applicantId);
     check('Applicant role is "applicant"', $applicant['role'] === 'applicant');
 

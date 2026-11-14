@@ -4,7 +4,7 @@ $isMe = ($user !== null && $user['id'] == Auth::id());
 $current = [
     'name'  => $user['name']  ?? $old['name']  ?? '',
     'email' => $user['email'] ?? $old['email'] ?? '',
-    'role'  => $user['role']  ?? $old['role']  ?? 'hr',
+    'role'  => $user['role']  ?? $old['role']  ?? 'applicant',
 ];
 ?>
 <!DOCTYPE html>
@@ -22,7 +22,7 @@ $current = [
     <?php require __DIR__ . '/../partials/staff_userbar.php'; ?>
     <div class="page-head">
       <div class="h1"><?= $user ? 'Edit User' : 'Add User' ?></div>
-      <p class="page-sub"><?= $user ? 'Change the details of this account. Leave the password empty to keep it unchanged.' : 'Create an HR, Super Admin or applicant account.' ?></p>
+      <p class="page-sub"><?= $user ? 'Change the details of this account. Leave the password empty to keep it unchanged.' : 'Create an account for an employee, HR staff member or Super Admin. They log in with the email and password you set.' ?></p>
     </div>
 
     <div class="panel form-panel">
@@ -45,9 +45,9 @@ $current = [
         <div class="field">
           <label class="field-label">Role</label>
           <select name="role" <?= $isMe ? 'disabled' : '' ?>>
+            <option value="applicant" <?= $current['role'] === 'applicant' ? 'selected' : '' ?>>Employee (can apply for vacancies)</option>
             <option value="hr"        <?= $current['role'] === 'hr' ? 'selected' : '' ?>>HR staff</option>
             <option value="admin"     <?= $current['role'] === 'admin' ? 'selected' : '' ?>>Super Admin</option>
-            <option value="applicant" <?= $current['role'] === 'applicant' ? 'selected' : '' ?>>Applicant</option>
           </select>
           <?php if ($isMe): ?><div class="muted" style="margin-top:4px;">You cannot change your own role.</div><?php endif; ?>
         </div>

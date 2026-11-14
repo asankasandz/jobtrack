@@ -66,7 +66,7 @@ try {
     ], $hrId);
     check('A user who created a vacancy now has records (cannot be deleted)', User::hasRecords($hrId) === true);
 
-    $applicantId = User::createApplicant('Admin Test Applicant', "admintest_app_$stamp@example.com", 'Password123!');
+    $applicantId = User::create('Admin Test Applicant', "admintest_app_$stamp@example.com", 'Password123!', 'applicant');
     $applicationId = Application::create($vacancyId, $applicantId, 'fake.pdf', 'Cover.');
     check('An applicant with an application has records', User::hasRecords($applicantId) === true);
 

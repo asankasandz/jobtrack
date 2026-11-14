@@ -48,7 +48,6 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
     switch ($route) {
         // Authentication
         case 'login':                  $auth->login(); break;
-        case 'signup':                 $auth->signup(); break;
 
         // Vacancies (HR)
         case 'vacancies.store':        $vacancies->store(); break;
@@ -77,7 +76,6 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
 
         // Authentication
         case 'login':                  $auth->showLogin(); break;
-        case 'signup':                 $auth->showSignup(); break;
         case 'logout':                 $auth->logout(); break;
 
         // Vacancies (HR)

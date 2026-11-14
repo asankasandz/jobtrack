@@ -1,6 +1,7 @@
 <?php
 
-// Login, sign up and logout.
+// Login and logout. There is NO public sign-up: this is an internal system, so accounts
+// are created only by the Super Admin (AdminController::store).
 class AuthController
 {
     public function showLogin()
@@ -43,58 +44,6 @@ class AuthController
         }
 
         Auth::login($user);
-        header('Location: ' . $this->pageAfterLogin($user['role']));
-        exit;
-    }
-
-    public function showSignup()
-    {
-        if (Auth::check()) {
-            header('Location: index.php?route=' . $this->dashboardFor(Auth::role()));
-            exit;
-        }
-        $errors = $_SESSION['errors'] ?? [];
-        $old = $_SESSION['old'] ?? [];
-        unset($_SESSION['errors'], $_SESSION['old']);
-        require __DIR__ . '/../Views/auth/signup.php';
-    }
-
-    public function signup()
-    {
-        $name = trim($_POST['name'] ?? '');
-        $email = trim($_POST['email'] ?? '');
-        $password = $_POST['password'] ?? '';
-        $passwordConfirm = $_POST['password_confirm'] ?? '';
-        $errors = [];
-
-        if ($name === '' || $email === '' || $password === '') {
-            $errors[] = 'All fields are required.';
-        }
-        if (!filter_var($email, FILTER_VALIDATE_EMAIL)) {
-            $errors[] = 'Please enter a valid email address.';
-        }
-        if (strlen($password) < 8) {
-            $errors[] = 'Password must be at least 8 characters.';
-        }
-        if ($password !== $passwordConfirm) {
-            $errors[] = 'Password confirmation does not match.';
-        }
-        if ($email !== '' && User::emailExists($email)) {
-            $errors[] = 'An account with this email already exists.';
-        }
-
-        if (!empty($errors)) {
-            $_SESSION['errors'] = $errors;
-            $_SESSION['old'] = ['name' => $name, 'email' => $email];
-            header('Location: index.php?route=signup');
-            exit;
-        }
-
-        // Public sign-up always creates an Applicant account (never HR).
-        $userId = User::createApplicant($name, $email, $password);
-        $user = User::findById($userId);
-        Auth::login($user);
-
         header('Location: ' . $this->pageAfterLogin($user['role']));
         exit;
     }

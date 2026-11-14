@@ -9,7 +9,7 @@
 <div class="topbar">
   <div class="brand">JobTrack</div>
   <div class="user">
-    <div class="avatar"></div><?= htmlspecialchars($_SESSION['user_name']) ?> (Applicant)
+    <div class="avatar"></div><?= htmlspecialchars($_SESSION['user_name']) ?> (Employee)
     &nbsp;|&nbsp;<a href="index.php?route=applicant.dashboard">Dashboard</a>
     &nbsp;|&nbsp;<a href="index.php?route=home">Open Vacancies</a>
     &nbsp;|&nbsp;<a href="index.php?route=logout">Log out</a>
